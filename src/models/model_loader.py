@@ -1,9 +1,30 @@
 """모델 및 토크나이저 로딩 모듈"""
 
+import os
+
 import torch
+from dotenv import load_dotenv
+from huggingface_hub import login
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
 from utils.prompts import CHAT_TEMPLATE
+
+
+def huggingface_login(token: str | None = None) -> None:
+    """Hugging Face 로그인
+
+    Args:
+        token: HF 토큰. None이면 .env 파일의 HF_TOKEN 사용
+    """
+    load_dotenv()
+
+    if token is None:
+        token = os.environ.get("HF_TOKEN")
+
+    if token:
+        login(token=token)
+    else:
+        login()  # 대화형 로그인
 
 
 def load_tokenizer(model_name: str, use_chat_template: bool = True) -> AutoTokenizer:
