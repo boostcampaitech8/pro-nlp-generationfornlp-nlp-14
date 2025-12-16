@@ -1,0 +1,60 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# data - real
+data/test_dataset/
+data/train_dataset/
+data.tar.gz
+
+# project specific
+outputs/*
+experiences/*
+!experiences/.gitkeep
+
+# uv
+.venv/
+
+# 환경 변수
+.env
+.env.local
+.env.*.local
+
+# IDE
+.idea/
+*.swp
+*.swo
+*~
+.vscode/
+
+# Ruff
+.ruff_cache/
+
+# 빌드 및 배포
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# 테스트
+.pytest_cache/
+.coverage
+htmlcov/
+
+# 로그
+*.log
+wandb/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Claude
+.claude/
+CLAUDE.md
+Agent.md
+
+help/
