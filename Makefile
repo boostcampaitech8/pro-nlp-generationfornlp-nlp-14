@@ -1,0 +1,1 @@
+.PHONY: help install dev lint format clean clean-cache clean-all
