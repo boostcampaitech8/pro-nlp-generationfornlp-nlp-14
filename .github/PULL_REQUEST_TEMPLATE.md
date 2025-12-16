@@ -6,7 +6,7 @@
 - [ ] [작업 항목 2]
 
 ## 관련 이슈
-- [MRC-XX](https://boostcamp-ai-tech.atlassian.net/browse/MRC-XX)
+- [CSAT-XX](https://boostcamp-ai-tech.atlassian.net/browse/CSAT-XX)
 
 <!-- 
 제목은 다음과 같이 설정하세요!
