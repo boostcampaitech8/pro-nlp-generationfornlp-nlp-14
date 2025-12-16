@@ -1,15 +1,13 @@
 import argparse
 
-import numpy as np
 import pandas as pd
 import torch
 from peft import AutoPeftModelForCausalLM
 from tqdm import tqdm
 from transformers import AutoTokenizer
 
-import sys
-sys.path.append("src")
 from data.data_processing import create_test_prompt_messages, load_and_parse_data
+from utils.prediction import get_choice_token_ids, logits_to_prediction
 
 
 def main(args):
@@ -30,7 +28,6 @@ def main(args):
 
     # 추론 실행
     infer_results = []
-    pred_choices_map = {0: "1", 1: "2", 2: "3", 3: "4", 4: "5"}
 
     model.eval()
     with torch.inference_mode():
@@ -50,20 +47,10 @@ def main(args):
 
             logits = outputs.logits[:, -1].flatten().cpu()
 
-            target_logit_list = [
-                logits[tokenizer.vocab[str(i + 1)]] for i in range(len_choices)
-            ]
+            choice_ids = get_choice_token_ids(tokenizer, len_choices)
+            target_logits = torch.tensor([logits[idx] for idx in choice_ids])
 
-            probs = (
-                torch.nn.functional.softmax(
-                    torch.tensor(target_logit_list, dtype=torch.float32), dim=-1
-                )
-                .detach()
-                .cpu()
-                .numpy()
-            )
-
-            predict_value = pred_choices_map[np.argmax(probs, axis=-1)]
+            predict_value = logits_to_prediction(target_logits, len_choices)
             infer_results.append({"id": _id, "answer": predict_value})
 
     # 결과 저장

@@ -4,20 +4,15 @@ import evaluate
 import numpy as np
 import torch
 from peft import LoraConfig
-from transformers import AutoModelForCausalLM, AutoTokenizer
 from trl import DataCollatorForCompletionOnlyLM, SFTConfig, SFTTrainer
-
-import sys
-sys.path.append("src")
 from data.data_processing import (
     create_prompt_messages,
     load_and_parse_data,
     set_seed,
     tokenize_dataset,
 )
-
-
-CHAT_TEMPLATE = "{% if messages[0]['role'] == 'system' %}{% set system_message = messages[0]['content'] %}{% endif %}{% if system_message is defined %}{{ system_message }}{% endif %}{% for message in messages %}{% set content = message['content'] %}{% if message['role'] == 'user' %}{{ '<start_of_turn>user\n' + content + '<end_of_turn>\n<start_of_turn>model\n' }}{% elif message['role'] == 'assistant' %}{{ content + '<end_of_turn>\n' }}{% endif %}{% endfor %}"
+from models.model_loader import load_model_for_training, load_tokenizer
+from utils.prediction import decode_labels, extract_choice_logits
 
 
 def get_peft_config(r: int = 6, lora_alpha: int = 8, lora_dropout: float = 0.05):
@@ -34,27 +29,14 @@ def get_peft_config(r: int = 6, lora_alpha: int = 8, lora_dropout: float = 0.05)
 
 def preprocess_logits_for_metrics(logits, labels, tokenizer):
     """모델의 logits를 조정하여 정답 토큰 부분만 출력"""
-    logits = logits if not isinstance(logits, tuple) else logits[0]
-    logit_idx = [
-        tokenizer.vocab["1"],
-        tokenizer.vocab["2"],
-        tokenizer.vocab["3"],
-        tokenizer.vocab["4"],
-        tokenizer.vocab["5"],
-    ]
-    logits = logits[:, -2, logit_idx]
-    return logits
+    return extract_choice_logits(logits, tokenizer, position=-2)
 
 
 def compute_metrics(evaluation_result, tokenizer, acc_metric):
     """metric 계산 함수"""
     logits, labels = evaluation_result
-    int_output_map = {"1": 0, "2": 1, "3": 2, "4": 3, "5": 4}
 
-    labels = np.where(labels != -100, labels, tokenizer.pad_token_id)
-    labels = tokenizer.batch_decode(labels, skip_special_tokens=True)
-    labels = list(map(lambda x: x.split("<end_of_turn>")[0].strip(), labels))
-    labels = list(map(lambda x: int_output_map[x], labels))
+    labels = decode_labels(labels, tokenizer)
 
     probs = torch.nn.functional.softmax(torch.tensor(logits), dim=-1)
     predictions = np.argmax(probs, axis=-1)
@@ -67,19 +49,8 @@ def main(args):
     set_seed(args.seed)
 
     # 모델 및 토크나이저 로드
-    model = AutoModelForCausalLM.from_pretrained(
-        args.model_name,
-        torch_dtype=torch.float16,
-        trust_remote_code=True,
-    )
-    tokenizer = AutoTokenizer.from_pretrained(
-        args.model_name,
-        trust_remote_code=True,
-    )
-    tokenizer.chat_template = CHAT_TEMPLATE
-    tokenizer.pad_token = tokenizer.eos_token
-    tokenizer.pad_token_id = tokenizer.eos_token_id
-    tokenizer.padding_side = "right"
+    model = load_model_for_training(args.model_name)
+    tokenizer = load_tokenizer(args.model_name)
 
     # 데이터 로드 및 전처리
     df = load_and_parse_data(args.train_data)
