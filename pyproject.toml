@@ -16,3 +16,10 @@ dependencies = [
     "transformers==4.40.2",
     "trl==0.11.4",
 ]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["src*"]
+
+[tool.setuptools.package-dir]
+"" = "src"
