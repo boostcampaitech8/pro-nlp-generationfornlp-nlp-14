@@ -15,6 +15,7 @@ data/train.csv
 outputs/*
 experiences/*
 !experiences/.gitkeep
+notebooks/baseline_code.ipynb
 
 # uv
 .venv/
