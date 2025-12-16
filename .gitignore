@@ -5,11 +5,8 @@ __pycache__/
 *.so
 .Python
 
-# data - real
-data/PaxHeader/
-data/output.csv
-data/test.csv
-data/train.csv
+# dataset
+data/
 
 # project specific
 outputs/*
@@ -29,7 +26,6 @@ experiences/*
 *.swp
 *.swo
 *~
-.vscode/
 
 # Ruff
 .ruff_cache/
