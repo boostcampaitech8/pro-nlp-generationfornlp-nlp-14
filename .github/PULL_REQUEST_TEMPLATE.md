@@ -1,3 +1,9 @@
+<!-- 
+제목은 다음과 같이 설정하세요!
+{issue type}: {issue title}
+제목을 적었다면 지워주세요!
+-->
+
 ## 목적
 [PR의 목적을 간단히 설명하세요]
 
@@ -8,8 +14,3 @@
 ## 관련 이슈
 - [CSAT-XX](https://boostcamp-ai-tech.atlassian.net/browse/CSAT-XX)
 
-<!-- 
-제목은 다음과 같이 설정하세요!
-{issue type}: {issue title}
-제목을 적었다면 지워주세요!
--->
