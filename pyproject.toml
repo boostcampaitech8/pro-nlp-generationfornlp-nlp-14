@@ -1,0 +1,27 @@
+[project]
+name = "pro-nlp-generationfornlp-nlp-14"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.9,<3.13"
+dependencies = [
+    "evaluate==0.4.3",
+    "ipykernel==6.29.5",
+    "ipywidgets==8.1.5",
+    "matplotlib==3.9.2",
+    "numpy==1.26.4",
+    "peft==0.13.2",
+    "python-dotenv>=1.2.1",
+    "requests==2.32.5",
+    "rich>=14.2.0",
+    "scikit-learn==1.5.2",
+    "transformers==4.40.2",
+    "trl==0.11.4",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["src*"]
+
+[tool.setuptools.package-dir]
+"" = "src"
