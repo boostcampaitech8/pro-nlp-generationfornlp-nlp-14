@@ -12,7 +12,7 @@ from data.data_processing import (
     tokenize_dataset,
 )
 from models.model_loader import load_model_for_training, load_tokenizer
-from utils.prediction import decode_labels, extract_choice_logits
+from utils import decode_labels, extract_choice_logits
 
 
 def get_peft_config(r: int = 6, lora_alpha: int = 8, lora_dropout: float = 0.05):

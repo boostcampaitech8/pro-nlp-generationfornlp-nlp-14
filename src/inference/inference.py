@@ -7,7 +7,7 @@ from tqdm import tqdm
 from transformers import AutoTokenizer
 
 from data.data_processing import create_test_prompt_messages, load_and_parse_data
-from utils.prediction import get_choice_token_ids, logits_to_prediction
+from utils import get_choice_token_ids, logits_to_prediction
 
 
 def main(args):
