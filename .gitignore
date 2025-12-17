@@ -30,7 +30,6 @@ notebooks/baseline_code.ipynb
 *.swp
 *.swo
 *~
-.vscode/
 
 # Ruff
 .ruff_cache/
