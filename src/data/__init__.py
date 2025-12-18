@@ -1,6 +1,6 @@
 """Data processing module for Generation for NLP."""
 
-from .data_processing import (
+from data.data_processing import (
     PROMPT_NO_QUESTION_PLUS,
     PROMPT_QUESTION_PLUS,
     create_prompt_messages,
