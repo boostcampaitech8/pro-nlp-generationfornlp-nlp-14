@@ -30,6 +30,9 @@ from utils.prediction import (
 # 프롬프트 템플릿
 from utils.prompts import CHAT_TEMPLATE
 
+# wandb 설정 함수
+from utils.wandb_setup import setup_wandb
+
 __all__ = [
     # 상수
     "INT_TO_STR_MAP",
@@ -48,4 +51,6 @@ __all__ = [
     "decode_labels",
     # 템플릿
     "CHAT_TEMPLATE",
+    # wandb 설정 함수
+    "setup_wandb",
 ]
