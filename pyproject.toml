@@ -3,7 +3,7 @@ name = "pro-nlp-generationfornlp-nlp-14"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
-requires-python = ">=3.9,<3.13"
+requires-python = ">=3.10,<3.13"
 dependencies = [
     "evaluate==0.4.3",
     "ipykernel==6.29.5",
@@ -34,7 +34,7 @@ include = ["src*"]
 "" = "src"
 
 [tool.ruff]
-target-version = "py39"
+target-version = "py310"
 line-length = 100
 src = ["src"]
 
@@ -47,7 +47,7 @@ quote-style = "double"
 indent-style = "space"
 
 [tool.mypy]
-python_version = "3.9"
+python_version = "3.10"
 warn_return_any = true
 warn_unused_ignores = true
 ignore_missing_imports = true
