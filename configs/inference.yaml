@@ -3,7 +3,7 @@
 
 # 모델 설정
 model:
-  checkpoint_path: "outputs/checkpoint-xxx"  # 실제 경로로 수정 필요
+  checkpoint_path: "beomi/gemma-ko-2b"   #실제 경로 or Hugging Face 모델명
 
 # 데이터 설정
 data:

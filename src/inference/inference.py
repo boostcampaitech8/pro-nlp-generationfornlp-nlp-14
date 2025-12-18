@@ -4,7 +4,7 @@ import pandas as pd
 import torch
 from peft import AutoPeftModelForCausalLM
 from tqdm import tqdm
-from transformers import AutoTokenizer
+from transformers import AutoModelForCausalLM, AutoTokenizer
 
 from data.data_processing import create_test_prompt_messages, load_and_parse_data
 from utils import InferenceConfig, get_choice_token_ids, logits_to_prediction
@@ -16,12 +16,19 @@ def main(config: InferenceConfig):
     Args:
         config: 추론 설정 객체
     """
-    # 모델 및 토크나이저 로드
-    model = AutoPeftModelForCausalLM.from_pretrained(
-        config.checkpoint_path,
-        trust_remote_code=True,
-        device_map="auto",
-    )
+    if config.checkpoint_path[:7] == "outputs":
+        # 모델 및 토크나이저 로드
+        model = AutoPeftModelForCausalLM.from_pretrained(
+            config.checkpoint_path,
+            trust_remote_code=True,
+            device_map="auto",
+        )
+    else:
+        model = AutoModelForCausalLM.from_pretrained(
+            config.checkpoint_path,
+            trust_remote_code=True,
+            device_map="auto",
+        )
     tokenizer = AutoTokenizer.from_pretrained(
         config.checkpoint_path,
         trust_remote_code=True,
