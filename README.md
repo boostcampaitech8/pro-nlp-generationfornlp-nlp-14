@@ -19,9 +19,6 @@ make dev
 ```bash
 # 기본 config로 학습
 make train
-
-# 커스텀 config로 학습
-make train TRAIN_CONFIG=configs/my_experiment.yaml
 ```
 
 ### 추론
@@ -29,51 +26,55 @@ make train TRAIN_CONFIG=configs/my_experiment.yaml
 ```bash
 # 기본 config로 추론
 make inference
-
-# 커스텀 config로 추론
-make inference INFERENCE_CONFIG=configs/my_inference.yaml
 ```
 
 ## Config 파일 구조
 
-### configs/train.yaml
+모든 설정은 `configs/config.yaml` 하나의 파일에서 관리합니다.
+
+### configs/config.yaml
 
 ```yaml
-model:
-  name: "beomi/gemma-ko-2b"
+# 학습 설정
+train:
+  model:
+    name: "beomi/gemma-ko-2b"
 
-data:
-  train_path: "data/train.csv"
-  eval_ratio: 0.1
+  data:
+    train_path: "data/train.csv"
+    eval_ratio: 0.1
 
-training:
-  output_dir: "outputs_gemma"
-  max_seq_length: 1024
-  batch_size: 1
-  epochs: 3
-  learning_rate: 2.0e-5
-  weight_decay: 0.01
-  logging_steps: 1
-  seed: 42
-  report_to: "none"  # "wandb", "tensorboard", "none"
+  training:
+    output_dir: "outputs"
+    max_seq_length: 1024
+    batch_size: 1
+    epochs: 3
+    learning_rate: 2.0e-5
+    weight_decay: 0.01
+    logging_steps: 1
+    logging_strategy: "epoch"
+    seed: 42
 
-lora:
-  r: 6
-  alpha: 8
-  dropout: 0.05
-```
+  lora:
+    r: 6
+    alpha: 8
+    dropout: 0.05
 
-### configs/inference.yaml
+# 추론 설정
+inference:
+  model:
+    checkpoint_path: "beomi/gemma-ko-2b"  # HF 모델명 또는 체크포인트 경로
 
-```yaml
-model:
-  checkpoint_path: "outputs_gemma/checkpoint-xxx"
+  data:
+    test_path: "data/test.csv"
 
-data:
-  test_path: "data/test.csv"
+  output:
+    path: "outputs/output.csv"
 
-output:
-  path: "output.csv"
+# W&B 로깅 설정
+wandb:
+  project: "CSAT"
+  run_name: null  # null이면 자동 생성
 ```
 
 ## 새 옵션 추가 방법
@@ -108,14 +109,15 @@ _yaml_key_mapping: ClassVar[dict[str, str]] = {
 }
 ```
 
-#### 3. configs/train.yaml에 값 추가
+#### 3. configs/config.yaml에 값 추가
 
 ```yaml
-training:
-  # ... 기존 값들 ...
+train:
+  training:
+    # ... 기존 값들 ...
 
-  # 새 값 추가
-  gradient_accumulation_steps: 4
+    # 새 값 추가
+    gradient_accumulation_steps: 4
 ```
 
 #### 4. train.py에서 사용

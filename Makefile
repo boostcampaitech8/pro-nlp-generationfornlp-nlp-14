@@ -5,8 +5,7 @@ PYTHONPATH := $(shell pwd)/src
 export PYTHONPATH
 
 # Config 파일 경로
-TRAIN_CONFIG := configs/train.yaml
-INFERENCE_CONFIG := configs/inference.yaml
+CONFIG := configs/config.yaml
 
 # 기본 타겟
 .DEFAULT_GOAL := help
@@ -26,9 +25,9 @@ help:
 	@echo "  make check      - 모든 코드 품질 검사"
 	@echo ""
 	@echo "  === 학습/추론 ==="
-	@echo "  make train                          - 모델 학습 ($(TRAIN_CONFIG))"
-	@echo "  make train TRAIN_CONFIG=path.yaml   - 커스텀 config로 학습"
-	@echo "  make inference                      - 모델 추론 ($(INFERENCE_CONFIG))"
+	@echo "  make train                          - 모델 학습 ($(CONFIG))"
+	@echo "  make train CONFIG=path.yaml         - 커스텀 config로 학습"
+	@echo "  make inference                      - 모델 추론 ($(CONFIG))"
 	@echo ""
 	@echo "  === 정리 ==="
 	@echo "  make clean       - Python 캐시 삭제"
@@ -57,10 +56,10 @@ check: lint typecheck
 
 # 학습/추론
 train:
-	uv run python src/trainers/train.py $(TRAIN_CONFIG)
+	uv run python src/trainers/train.py $(CONFIG)
 
 inference:
-	uv run python src/inference/inference.py $(INFERENCE_CONFIG)
+	uv run python src/inference/inference.py $(CONFIG)
 
 # 정리
 clean:
