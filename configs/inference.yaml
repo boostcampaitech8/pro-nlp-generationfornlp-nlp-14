@@ -3,7 +3,7 @@
 
 # 모델 설정
 model:
-  checkpoint_path: "outputs_gemma/checkpoint-xxx"  # 실제 경로로 수정 필요
+  checkpoint_path: "outputs/checkpoint-xxx"  # 실제 경로로 수정 필요
 
 # 데이터 설정
 data:
@@ -11,4 +11,4 @@ data:
 
 # 출력 설정
 output:
-  path: "output.csv"
+  path: "outputs/output.csv"
