@@ -11,7 +11,7 @@ data:
 
 # 학습 하이퍼파라미터
 training:
-  output_dir: "outputs_gemma"
+  output_dir: "outputs"
   max_seq_length: 1024
   batch_size: 1
   epochs: 3
