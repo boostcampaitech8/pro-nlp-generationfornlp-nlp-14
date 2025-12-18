@@ -75,7 +75,7 @@ def main(config: InferenceConfig):
 if __name__ == "__main__":
     if len(sys.argv) < 2:
         print("Usage: python inference.py <config_path>")
-        print("Example: python inference.py configs/inference.yaml")
+        print("Example: python inference.py configs/config.yaml")
         sys.exit(1)
 
     config_path = sys.argv[1]
