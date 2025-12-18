@@ -6,7 +6,6 @@ import pandas as pd
 import torch
 from datasets import Dataset
 
-
 PROMPT_NO_QUESTION_PLUS = """지문:
 {paragraph}
 
@@ -187,9 +186,7 @@ def tokenize_dataset(
         desc="Tokenizing",
     )
 
-    tokenized_dataset = tokenized_dataset.filter(
-        lambda x: len(x["input_ids"]) <= max_seq_length
-    )
+    tokenized_dataset = tokenized_dataset.filter(lambda x: len(x["input_ids"]) <= max_seq_length)
     tokenized_dataset = tokenized_dataset.train_test_split(test_size=test_size, seed=seed)
 
     return tokenized_dataset["train"], tokenized_dataset["test"]

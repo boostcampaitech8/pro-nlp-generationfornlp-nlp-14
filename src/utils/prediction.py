@@ -53,7 +53,7 @@ def decode_labels(labels: np.ndarray, tokenizer) -> list[int]:
     Returns:
         정수 인덱스 리스트
     """
-    labels = np.where(labels != -100, labels, tokenizer.pad_token_id)
-    labels = tokenizer.batch_decode(labels, skip_special_tokens=True)
-    labels = [x.split("<end_of_turn>")[0].strip() for x in labels]
-    return [STR_TO_INT_MAP[x] for x in labels]
+    cleaned_labels = np.where(labels != -100, labels, tokenizer.pad_token_id)
+    decoded_labels = tokenizer.batch_decode(cleaned_labels, skip_special_tokens=True)
+    parsed_labels = [x.split("<end_of_turn>")[0].strip() for x in decoded_labels]
+    return [STR_TO_INT_MAP[x] for x in parsed_labels]

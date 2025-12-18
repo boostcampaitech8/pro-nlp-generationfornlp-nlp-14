@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 from huggingface_hub import login
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
-from utils.prompts import CHAT_TEMPLATE
+from utils import CHAT_TEMPLATE
 
 
 def huggingface_login(token: str | None = None) -> None:

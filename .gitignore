@@ -34,6 +34,7 @@ notebooks/baseline_code.ipynb
 
 # Ruff
 .ruff_cache/
+.mypy_cache/
 
 # 빌드 및 배포
 build/
