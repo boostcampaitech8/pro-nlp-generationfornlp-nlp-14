@@ -114,7 +114,7 @@ class InferenceConfig:
     YAML 파일에서 설정을 로드함.
     """
 
-    # 모델 설정
+    # 모델 설정, hf 모델명
     checkpoint_path: str = "outputs/checkpoint-xxx"
 
     # 데이터 설정
