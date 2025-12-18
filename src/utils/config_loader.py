@@ -61,6 +61,7 @@ class TrainConfig:
     learning_rate: float = 2e-5
     weight_decay: float = 0.01
     logging_steps: int = 1
+    logging_strategy: str = "epoch"
     seed: int = 42
     report_to: str = "none"
 
@@ -81,6 +82,7 @@ class TrainConfig:
         "training_learning_rate": "learning_rate",
         "training_weight_decay": "weight_decay",
         "training_logging_steps": "logging_steps",
+        "training_logging_strategy": "logging_strategy",
         "training_seed": "seed",
         "training_report_to": "report_to",
         "lora_r": "lora_r",

@@ -18,6 +18,7 @@ training:
   learning_rate: 2.0e-5
   weight_decay: 0.01
   logging_steps: 1
+  logging_strategy: "epoch"  # "steps", "epoch", "no"
   seed: 42
   report_to: "none"  # "wandb", "tensorboard", "none"
 

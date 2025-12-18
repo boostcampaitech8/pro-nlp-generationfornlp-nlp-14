@@ -99,6 +99,7 @@ def main(config: TrainConfig):
         learning_rate=config.learning_rate,
         weight_decay=config.weight_decay,
         logging_steps=config.logging_steps,
+        logging_strategy=config.logging_strategy,
         save_strategy="epoch",
         evaluation_strategy="epoch",
         save_total_limit=2,
