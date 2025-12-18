@@ -54,7 +54,7 @@ class TrainConfig:
     eval_ratio: float = 0.1
 
     # 학습 하이퍼파라미터
-    output_dir: str = "outputs_gemma"
+    output_dir: str = "outputs"
     max_seq_length: int = 1024
     batch_size: int = 1
     epochs: int = 3
@@ -113,7 +113,7 @@ class InferenceConfig:
     """
 
     # 모델 설정
-    checkpoint_path: str = "outputs_gemma/checkpoint-xxx"
+    checkpoint_path: str = "outputs/checkpoint-xxx"
 
     # 데이터 설정
     test_data: str = "data/test.csv"
