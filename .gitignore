@@ -10,6 +10,7 @@ data/PaxHeader/
 data/output.csv
 data/test.csv
 data/train.csv
+data/train_source_labeled.csv
 
 # project specific
 outputs/*
