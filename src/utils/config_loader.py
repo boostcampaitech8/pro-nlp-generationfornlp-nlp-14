@@ -111,6 +111,7 @@ class TrainConfig(BaseConfig):
     lora_dropout: float
 
     # wandb 설정
+    wandb_entity: str
     wandb_project: str
     wandb_run_name: str | None
 
@@ -132,6 +133,7 @@ class TrainConfig(BaseConfig):
         "lora_alpha": "lora_alpha",
         "lora_dropout": "lora_dropout",
         # wandb 섹션
+        "entity": "wandb_entity",
         "project": "wandb_project",
         "run_name": "wandb_run_name",
     }

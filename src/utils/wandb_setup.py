@@ -26,6 +26,7 @@ def setup_wandb(config: TrainConfig) -> None:
 
     # W&B 초기화
     wandb.init(
+        entity=config.wandb_entity,
         project=config.wandb_project,
         name=config.wandb_run_name,
         config=config.to_wandb_config(),

@@ -46,8 +46,9 @@ inference:
 # -------------------------------------------- #
 # wandb 설정
 wandb:
+  entity: "TeamAtoI"
   project: "CSAT"
-  run_name: null # 자동생성, 이름 지정도 가능
+  run_name: test # 자동생성, 이름 지정도 가능
 
 # -------------------------------------------- #
 #                     SCORE                           
