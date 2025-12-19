@@ -4,7 +4,7 @@ import os
 
 import wandb
 from dotenv import load_dotenv
-from src.utils.config_loader import BaseConfig
+from utils.config_loader import BaseConfig
 
 
 def setup_wandb(config: BaseConfig) -> None:
