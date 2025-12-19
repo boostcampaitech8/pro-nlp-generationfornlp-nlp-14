@@ -15,20 +15,21 @@ Config 구조:
     3. _yaml_key_mapping에 매핑 추가: "training_report_to": "report_to"
 """
 
-from dataclasses import dataclass
+from abc import ABC
+from dataclasses import dataclass, fields
 from pathlib import Path
-from typing import Any, ClassVar
+from typing import Any, ClassVar, Self
 
 import yaml
 
 
-def load_yaml_config(config_path: str | Path) -> dict[str, Any]:
+def _load_yaml_config(config_path: str | Path) -> dict[str, Any]:
     """YAML 설정 파일 로드"""
     with open(config_path, encoding="utf-8") as f:
         return yaml.safe_load(f) or {}
 
 
-def flatten_config(config: dict[str, Any], prefix: str = "") -> dict[str, Any]:
+def _flatten_config(config: dict[str, Any], prefix: str = "") -> dict[str, Any]:
     """중첩된 config를 flat하게 변환
 
     예: {"training": {"epochs": 3}} -> {"training_epochs": 3}
@@ -37,18 +38,66 @@ def flatten_config(config: dict[str, Any], prefix: str = "") -> dict[str, Any]:
     for key, value in config.items():
         full_key = f"{prefix}{key}" if prefix else key
         if isinstance(value, dict):
-            flat.update(flatten_config(value, f"{full_key}_"))
+            flat.update(_flatten_config(value, f"{full_key}_"))
         else:
             flat[full_key] = value
     return flat
 
 
+class BaseConfig(ABC):
+    """Config 기본 클래스
+
+    YAML 로드와 wandb config 변환 기능 제공.
+    서브클래스에서 _yaml_key_mapping과 _yaml_sections를 정의해야 함.
+    """
+
+    _yaml_key_mapping: ClassVar[dict[str, str]]
+    _yaml_sections: ClassVar[list[str]]  # ["train", "wandb"] 등 여러 섹션 지정 가능
+
+    @classmethod
+    def from_yaml(cls, config_path: str | Path) -> Self:
+        """YAML 파일에서 Config 생성
+
+        _yaml_sections에 정의된 모든 섹션을 병합하여 로드.
+        """
+        yaml_config = _load_yaml_config(config_path)
+
+        # 여러 섹션을 병합
+        merged_flat = {}
+        for section in cls._yaml_sections:
+            section_config = yaml_config.get(section, {})
+            flat_config = _flatten_config(section_config)
+            merged_flat.update(flat_config)
+
+        # YAML 키를 필드명으로 변환
+        kwargs = {}
+        for yaml_key, attr_name in cls._yaml_key_mapping.items():
+            if yaml_key in merged_flat:
+                kwargs[attr_name] = merged_flat[yaml_key]
+
+        return cls(**kwargs)
+
+    def to_wandb_config(self) -> dict[str, Any]:
+        """wandb.init()에 전달할 config dict 생성
+
+        dataclass의 모든 필드를 자동으로 포함.
+        새 필드 추가 시 이 메서드 수정 불필요.
+        """
+        return {
+            field.name: getattr(self, field.name)
+            for field in fields(self)
+            if not field.name.startswith("_")
+        }
+
+
 @dataclass
-class TrainConfig:
+class TrainConfig(BaseConfig):
     """학습 설정
 
     configs/config.yaml의 train 섹션과 wandb 섹션에서 설정을 로드함.
     """
+
+    _yaml_sections: ClassVar[list[str]] = ["train", "wandb"]
 
     # 모델 설정
     model_name: str
@@ -77,8 +126,8 @@ class TrainConfig:
     wandb_project: str
     wandb_run_name: str | None
 
-    # YAML 키 -> 필드 매핑 (train 섹션 기준)
     _yaml_key_mapping: ClassVar[dict[str, str]] = {
+        # train 섹션
         "model_name": "model_name",
         "data_train_path": "train_data",
         "data_eval_ratio": "eval_ratio",
@@ -94,40 +143,20 @@ class TrainConfig:
         "lora_r": "lora_r",
         "lora_alpha": "lora_alpha",
         "lora_dropout": "lora_dropout",
+        # wandb 섹션
+        "project": "wandb_project",
+        "run_name": "wandb_run_name",
     }
-
-    @classmethod
-    def from_yaml(cls, config_path: str | Path) -> "TrainConfig":
-        """YAML 파일에서 TrainConfig 생성
-
-        config.yaml의 train 섹션과 wandb 섹션을 읽어서 설정 생성.
-        """
-        yaml_config = load_yaml_config(config_path)
-
-        # train 섹션 flatten
-        train_config = yaml_config.get("train", {})
-        flat_config = flatten_config(train_config)
-
-        # YAML 키를 필드명으로 변환
-        kwargs = {}
-        for yaml_key, attr_name in cls._yaml_key_mapping.items():
-            if yaml_key in flat_config:
-                kwargs[attr_name] = flat_config[yaml_key]
-
-        # wandb 섹션 추가
-        wandb_config = yaml_config.get("wandb", {})
-        kwargs["wandb_project"] = wandb_config.get("project", "default-project")
-        kwargs["wandb_run_name"] = wandb_config.get("run_name")
-
-        return cls(**kwargs)
 
 
 @dataclass
-class InferenceConfig:
+class InferenceConfig(BaseConfig):
     """추론 설정
 
     configs/config.yaml의 inference 섹션에서 설정을 로드함.
     """
+
+    _yaml_sections: ClassVar[list[str]] = ["inference"]
 
     # 모델 설정, hf 모델명 또는 체크포인트 경로
     checkpoint_path: str
@@ -138,29 +167,8 @@ class InferenceConfig:
     # 출력 설정
     output_path: str
 
-    # YAML 키 -> 필드 매핑 (inference 섹션 기준)
     _yaml_key_mapping: ClassVar[dict[str, str]] = {
         "model_checkpoint_path": "checkpoint_path",
         "data_test_path": "test_data",
         "output_path": "output_path",
     }
-
-    @classmethod
-    def from_yaml(cls, config_path: str | Path) -> "InferenceConfig":
-        """YAML 파일에서 InferenceConfig 생성
-
-        config.yaml의 inference 섹션을 읽어서 설정 생성.
-        """
-        yaml_config = load_yaml_config(config_path)
-
-        # inference 섹션 flatten
-        inference_config = yaml_config.get("inference", {})
-        flat_config = flatten_config(inference_config)
-
-        # YAML 키를 필드명으로 변환
-        kwargs = {}
-        for yaml_key, attr_name in cls._yaml_key_mapping.items():
-            if yaml_key in flat_config:
-                kwargs[attr_name] = flat_config[yaml_key]
-
-        return cls(**kwargs)
