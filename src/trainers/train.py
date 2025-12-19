@@ -54,10 +54,7 @@ def main(config: TrainConfig):
     """
     set_seed(config.seed)
 
-    setup_wandb(
-        project=config.wandb_project,
-        run_name=config.wandb_run_name,
-    )
+    setup_wandb(config=config)
 
     # 모델 및 토크나이저 로드
     model = load_model_for_training(config.model_name)
