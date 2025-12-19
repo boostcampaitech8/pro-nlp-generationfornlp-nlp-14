@@ -13,7 +13,7 @@ from data.data_processing import (
     tokenize_dataset,
 )
 from models.model_loader import load_model_for_training, load_tokenizer
-from utils import TrainConfig, decode_labels, extract_choice_logits
+from utils import TrainConfig, decode_labels, extract_choice_logits, setup_wandb
 
 
 def get_peft_config(r: int = 6, lora_alpha: int = 8, lora_dropout: float = 0.05):
@@ -53,6 +53,11 @@ def main(config: TrainConfig):
         config: 학습 설정 객체
     """
     set_seed(config.seed)
+
+    setup_wandb(
+        project=config.wandb_project,
+        run_name=config.wandb_run_name,
+    )
 
     # 모델 및 토크나이저 로드
     model = load_model_for_training(config.model_name)
@@ -104,7 +109,7 @@ def main(config: TrainConfig):
         evaluation_strategy="epoch",
         save_total_limit=2,
         save_only_model=True,
-        report_to=config.report_to,
+        report_to="wandb",
     )
 
     # Trainer 설정
@@ -130,7 +135,7 @@ def main(config: TrainConfig):
 if __name__ == "__main__":
     if len(sys.argv) < 2:
         print("Usage: python train.py <config_path>")
-        print("Example: python train.py configs/train.yaml")
+        print("Example: python train.py configs/config.yaml")
         sys.exit(1)
 
     config_path = sys.argv[1]
