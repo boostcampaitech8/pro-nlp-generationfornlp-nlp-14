@@ -1,15 +1,18 @@
+"""Weights & Biases 설정 유틸리티"""
+
 import os
 
 import wandb
 from dotenv import load_dotenv
+from src.utils.config_loader import BaseConfig
 
 
-def setup_wandb(project: str, run_name: str | None = None):
-    """Weights & Biases 설정 함수
+def setup_wandb(config: BaseConfig) -> None:
+    """Weights & Biases 설정 및 초기화
 
     Args:
-        project: W&B 프로젝트 이름
-        run_name: W&B 실행 이름 (기본값: None, 자동 생성)
+        config: BaseConfig를 상속한 설정 객체 (TrainConfig, InferenceConfig 등)
+                wandb_project, wandb_run_name 필드와 to_wandb_config() 메서드 사용
     """
     # .env 파일에서 환경 변수 로드
     load_dotenv()
@@ -23,6 +26,7 @@ def setup_wandb(project: str, run_name: str | None = None):
 
     # W&B 초기화
     wandb.init(
-        project=project,
-        name=run_name,
+        project=config.wandb_project,
+        name=config.wandb_run_name,
+        config=config.to_wandb_config(),
     )

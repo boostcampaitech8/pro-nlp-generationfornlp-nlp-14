@@ -57,6 +57,7 @@ def main(config: TrainConfig):
     setup_wandb(
         project=config.wandb_project,
         run_name=config.wandb_run_name,
+        config=config,
     )
 
     # 모델 및 토크나이저 로드
