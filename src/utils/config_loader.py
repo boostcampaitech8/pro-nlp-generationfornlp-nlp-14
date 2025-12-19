@@ -18,9 +18,10 @@ Config 구조:
 from abc import ABC
 from dataclasses import dataclass, fields
 from pathlib import Path
-from typing import Any, ClassVar, Self
+from typing import Any, ClassVar
 
 import yaml
+from typing_extensions import Self
 
 
 def _load_yaml_config(config_path: str | Path) -> dict[str, Any]:
@@ -76,19 +77,6 @@ class BaseConfig(ABC):
                 kwargs[attr_name] = merged_flat[yaml_key]
 
         return cls(**kwargs)
-
-    def to_wandb_config(self) -> dict[str, Any]:
-        """wandb.init()에 전달할 config dict 생성
-
-        dataclass의 모든 필드를 자동으로 포함.
-        새 필드 추가 시 이 메서드 수정 불필요.
-        """
-        return {
-            field.name: getattr(self, field.name)
-            for field in fields(self)
-            if not field.name.startswith("_")
-        }
-
 
 @dataclass
 class TrainConfig(BaseConfig):
@@ -147,6 +135,18 @@ class TrainConfig(BaseConfig):
         "project": "wandb_project",
         "run_name": "wandb_run_name",
     }
+
+    def to_wandb_config(self) -> dict[str, Any]:
+        """wandb.init()에 전달할 config dict 생성
+
+        dataclass의 모든 필드를 자동으로 포함.
+        새 필드 추가 시 이 메서드 수정 불필요.
+        """
+        return {
+            field.name: getattr(self, field.name)
+            for field in fields(self)
+            if not field.name.startswith("_")
+        }
 
 
 @dataclass
