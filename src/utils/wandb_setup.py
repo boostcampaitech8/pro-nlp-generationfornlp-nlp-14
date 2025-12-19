@@ -4,15 +4,15 @@ import os
 
 import wandb
 from dotenv import load_dotenv
-from utils.config_loader import BaseConfig
+
+from utils.config_loader import TrainConfig
 
 
-def setup_wandb(config: BaseConfig) -> None:
+def setup_wandb(config: TrainConfig) -> None:
     """Weights & Biases 설정 및 초기화
 
     Args:
-        config: BaseConfig를 상속한 설정 객체 (TrainConfig, InferenceConfig 등)
-                wandb_project, wandb_run_name 필드와 to_wandb_config() 메서드 사용
+        config: TrainConfig 객체 (wandb_project, wandb_run_name 필드 포함)
     """
     # .env 파일에서 환경 변수 로드
     load_dotenv()
