@@ -1,14 +1,15 @@
-from typing import List
+
 import torch
+
 
 class CompletionOnlyDataCollator:
     def __init__(self, tokenizer, response_template: str | None = None, label_pad_token_id: int = -100):
         self.tokenizer = tokenizer
-        
+
         self.response_template_ids = tokenizer.encode(response_template, add_special_tokens=False) if response_template else []
         self.label_pad_token_id = label_pad_token_id
 
-    def _find_response_start(self, ids: List[int]) -> int:
+    def _find_response_start(self, ids: list[int]) -> int:
         seq = self.response_template_ids
         if not seq:
             return 0
