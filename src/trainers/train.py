@@ -54,10 +54,7 @@ def main(config: TrainConfig):
     """
     set_seed(config.seed)
 
-    setup_wandb(
-        project=config.wandb_project,
-        run_name=config.wandb_run_name,
-    )
+    setup_wandb(config=config)
 
     model, tokenizer = FastLanguageModel.from_pretrained(
         model_name=config.model_name,

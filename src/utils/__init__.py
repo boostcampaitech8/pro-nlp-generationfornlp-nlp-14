@@ -12,8 +12,6 @@
 from utils.config_loader import (
     InferenceConfig,
     TrainConfig,
-    flatten_config,
-    load_yaml_config,
 )
 
 # 상수
@@ -41,9 +39,6 @@ __all__ = [
     # Config 클래스
     "TrainConfig",
     "InferenceConfig",
-    # Config 함수
-    "load_yaml_config",
-    "flatten_config",
     # 예측 함수
     "get_choice_token_ids",
     "extract_choice_logits",
