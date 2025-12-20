@@ -93,7 +93,7 @@ class TrainConfig:
     # ... 기존 필드들 ...
 
     # 새 필드 추가
-    gradient_accumulation_steps: int = 1
+    gradient_accumulation_steps: int
 ```
 
 #### 2. config_loader.py에 YAML 매핑 추가
