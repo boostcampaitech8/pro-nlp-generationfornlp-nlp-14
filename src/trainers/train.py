@@ -64,17 +64,6 @@ def main(config: TrainConfig):
         
     )
     
-    # 데이터 로드 및 전처리
-    df = load_and_parse_data(config.train_data)
-    processed_dataset = create_prompt_messages(df)
-    train_dataset, eval_dataset = tokenize_dataset(
-        processed_dataset,
-        tokenizer,
-        max_seq_length=config.max_seq_length,
-        test_size=config.eval_ratio,
-        seed=config.seed,
-    )
-    
     model = FastLanguageModel.get_peft_model(
         model,
         r=config.lora_r,
@@ -84,6 +73,17 @@ def main(config: TrainConfig):
         bias="none",
         use_gradient_checkpointing = "unsloth",
         use_rslora = True,   # We support rank stabilized LoRA
+    )
+    
+    # 데이터 로드 및 전처리
+    df = load_and_parse_data(config.train_data)
+    processed_dataset = create_prompt_messages(df)
+    train_dataset, eval_dataset = tokenize_dataset(
+        processed_dataset,
+        tokenizer,
+        max_seq_length=config.max_seq_length,
+        test_size=config.eval_ratio,
+        seed=config.seed,
     )
     
     # Data Collator 설정
