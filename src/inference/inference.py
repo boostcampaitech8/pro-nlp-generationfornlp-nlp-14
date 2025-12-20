@@ -1,5 +1,5 @@
 import sys
-
+from unsloth import FastLanguageModel
 import pandas as pd
 import torch
 from peft import AutoPeftModelForCausalLM
@@ -10,29 +10,53 @@ from data.data_processing import create_test_prompt_messages, load_and_parse_dat
 from utils import InferenceConfig, get_choice_token_ids, logits_to_prediction
 
 
+def load_model(model_path: str):
+    """checkpoint 경로에 따라 모델/토크나이저를 로드한다."""
+    # NOTE: config.yaml로 분리할지 논의 필요
+    FLM_SUPPORT_MODELS = ("unsloth")    
+    # FIXME: why it return True always
+    is_fast_candidate = any(k in model_path.lower() for k in FLM_SUPPORT_MODELS)
+    if is_fast_candidate:
+        print('--'*10, 'TRY USE UNSLOTH','--'*10)
+        try:
+            model, tokenizer = FastLanguageModel.from_pretrained(
+                # NOTE: max_seq_length 설정 필요 기본값 2048
+                model_name=model_path,
+                load_in_4bit=True,
+            )
+            FastLanguageModel.for_inference(model)
+            return model, tokenizer
+        except Exception as e:
+            # Fast 경로 실패 시 기본 로더로 폴백
+            print(f"FastLanguageModel load failed, fallback to HF loader. reason={e}")
+            
+    if model_path[:7] == "outputs":
+        model = AutoPeftModelForCausalLM.from_pretrained(
+            model_path,
+            trust_remote_code=True,
+            device_map="auto",
+        )
+    else:
+        model = AutoModelForCausalLM.from_pretrained(
+            model_path,
+            trust_remote_code=True,
+            device_map="auto",
+        )
+    tokenizer = AutoTokenizer.from_pretrained(
+        model_path,
+        trust_remote_code=True,
+    )
+    model.eval()
+    return model, tokenizer
+
+
 def main(config: InferenceConfig):
     """추론 메인 함수
 
     Args:
         config: 추론 설정 객체
     """
-    if config.checkpoint_path[:7] == "outputs":
-        # 모델 및 토크나이저 로드
-        model = AutoPeftModelForCausalLM.from_pretrained(
-            config.checkpoint_path,
-            trust_remote_code=True,
-            device_map="auto",
-        )
-    else:
-        model = AutoModelForCausalLM.from_pretrained(
-            config.checkpoint_path,
-            trust_remote_code=True,
-            device_map="auto",
-        )
-    tokenizer = AutoTokenizer.from_pretrained(
-        config.checkpoint_path,
-        trust_remote_code=True,
-    )
+    model, tokenizer = load_model(config.checkpoint_path)
 
     # 테스트 데이터 로드 및 전처리
     test_df = load_and_parse_data(config.test_data)
@@ -41,7 +65,6 @@ def main(config: InferenceConfig):
     # 추론 실행
     infer_results = []
 
-    model.eval()
     with torch.inference_mode():
         for data in tqdm(test_dataset, desc="Inference"):
             _id = data["id"]
