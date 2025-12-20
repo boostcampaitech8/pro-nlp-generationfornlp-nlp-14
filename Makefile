@@ -35,10 +35,10 @@ help:
 	@echo "  make clean-all   - 모든 캐시 삭제"
 
 # 설치
-install:
+install: system-deps
 	uv sync
 
-dev:
+dev: system-deps
 	uv sync --all-extras
 
 # 코드 품질
@@ -75,3 +75,9 @@ clean-cache:
 clean-all: clean clean-cache
 	rm -rf outputs_gemma/
 	rm -f output.csv
+
+system-deps:
+	@if ! command -v gcc > /dev/null 2>&1; then \
+		echo "gcc not found, installing build-essential..."; \
+		sudo apt-get update && sudo apt-get install -y build-essential; \
+	fi
