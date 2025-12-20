@@ -1,10 +1,10 @@
 import sys
-
+from unsloth import FastLanguageModel
 import evaluate
 import numpy as np
 import torch
 from peft import LoraConfig
-from trl import DataCollatorForCompletionOnlyLM, SFTConfig, SFTTrainer
+from trl import SFTConfig, SFTTrainer
 
 from data.data_processing import (
     create_prompt_messages,
@@ -14,6 +14,7 @@ from data.data_processing import (
 )
 from models.model_loader import load_model_for_training, load_tokenizer
 from utils import TrainConfig, decode_labels, extract_choice_logits, setup_wandb
+from trainers.CompletionOnlyDataCollator import CompletionOnlyDataCollator
 
 
 def get_peft_config(r: int = 6, lora_alpha: int = 8, lora_dropout: float = 0.05):
@@ -22,7 +23,7 @@ def get_peft_config(r: int = 6, lora_alpha: int = 8, lora_dropout: float = 0.05)
         r=r,
         lora_alpha=lora_alpha,
         lora_dropout=lora_dropout,
-        target_modules=["q_proj", "k_proj"],
+        target_modules=["q_proj", "k_proj", "v_proj"],
         bias="none",
         task_type="CAUSAL_LM",
     )
@@ -36,7 +37,6 @@ def preprocess_logits_for_metrics(logits, labels, tokenizer):
 def compute_metrics(evaluation_result, tokenizer, acc_metric):
     """metric 계산 함수"""
     logits, labels = evaluation_result
-
     labels = decode_labels(labels, tokenizer)
 
     probs = torch.nn.functional.softmax(torch.tensor(logits), dim=-1)
@@ -59,10 +59,14 @@ def main(config: TrainConfig):
         run_name=config.wandb_run_name,
     )
 
-    # 모델 및 토크나이저 로드
-    model = load_model_for_training(config.model_name)
-    tokenizer = load_tokenizer(config.model_name)
-
+    model, tokenizer = FastLanguageModel.from_pretrained(
+        model_name=config.model_name,
+        max_seq_length=config.max_seq_length,
+        load_in_4bit=True,
+        unsloth_tiled_mlp=True,
+        
+    )
+    
     # 데이터 로드 및 전처리
     df = load_and_parse_data(config.train_data)
     processed_dataset = create_prompt_messages(df)
@@ -73,17 +77,21 @@ def main(config: TrainConfig):
         test_size=config.eval_ratio,
         seed=config.seed,
     )
-
-    # LoRA 설정
-    peft_config = get_peft_config(
+    
+    model = FastLanguageModel.get_peft_model(
+        model,
         r=config.lora_r,
         lora_alpha=config.lora_alpha,
         lora_dropout=config.lora_dropout,
+        target_modules=["q_proj", "k_proj", "o_proj"],
+        bias="none",
+        use_gradient_checkpointing = "unsloth",
+        use_rslora = True,   # We support rank stabilized LoRA
     )
-
+    
     # Data Collator 설정
-    response_template = "<start_of_turn>model"
-    data_collator = DataCollatorForCompletionOnlyLM(
+    response_template = "<|im_start|>assistant"
+    data_collator = CompletionOnlyDataCollator(
         response_template=response_template,
         tokenizer=tokenizer,
     )
@@ -106,10 +114,11 @@ def main(config: TrainConfig):
         logging_steps=config.logging_steps,
         logging_strategy=config.logging_strategy,
         save_strategy="epoch",
-        evaluation_strategy="epoch",
+        eval_strategy="epoch",
         save_total_limit=2,
         save_only_model=True,
         report_to="wandb",
+        completion_only_loss=True,
     )
 
     # Trainer 설정
@@ -118,15 +127,13 @@ def main(config: TrainConfig):
         train_dataset=train_dataset,
         eval_dataset=eval_dataset,
         data_collator=data_collator,
-        tokenizer=tokenizer,
+        processing_class=tokenizer,
         compute_metrics=lambda x: compute_metrics(x, tokenizer, acc_metric),
         preprocess_logits_for_metrics=lambda logits, labels: preprocess_logits_for_metrics(
             logits, labels, tokenizer
         ),
-        peft_config=peft_config,
         args=sft_config,
     )
-
     # 학습 실행
     trainer.train()
     print(f"Training completed. Model saved to {config.output_dir}")

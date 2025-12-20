@@ -6,10 +6,12 @@ from trainers.train import (
     main,
     preprocess_logits_for_metrics,
 )
+from trainers.CompletionOnlyDataCollator import (CompletionOnlyDataCollator)
 
 __all__ = [
     "compute_metrics",
     "get_peft_config",
     "main",
     "preprocess_logits_for_metrics",
+    "CompletionOnlyDataCollator"
 ]
