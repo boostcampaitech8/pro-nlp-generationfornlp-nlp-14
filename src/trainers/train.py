@@ -47,6 +47,42 @@ def compute_metrics(evaluation_result, tokenizer, acc_metric):
     return acc
 
 
+def load_model(config):
+    model_name = config.mode_name
+    try:
+        model, tokenizer = FastLanguageModel.from_pretrained(
+            model_name=model_name,
+            max_seq_length=config.max_seq_length,
+            load_in_4bit=True,
+            unsloth_tiled_mlp=True,
+        )
+
+        model = FastLanguageModel.get_peft_model(
+            model,
+            r=config.lora_r,
+            lora_alpha=config.lora_alpha,
+            lora_dropout=config.lora_dropout,
+            target_modules=["q_proj", "k_proj", "o_proj"],
+            bias="none",
+            use_gradient_checkpointing="unsloth",
+            use_rslora=True,  # We support rank stabilized LoRA
+        )
+        return model, tokenizer
+    except Exception:
+        print("-----[FALLBACK] hf model will be load------")
+
+    model = load_model_for_training(model_name)
+    tokenizer = load_tokenizer(model_name)
+    lora_config = get_peft_config(
+        model,
+        r=config.lora_r,
+        lora_alpha=config.lora_alpha,
+        lora_dropout=config.lora_dropout,
+    )
+    model = get_peft_model(model, lora_config)
+    return model, tokenizer
+
+
 def main(config: TrainConfig):
     """학습 메인 함수
 
@@ -57,25 +93,8 @@ def main(config: TrainConfig):
 
     setup_wandb(config=config)
 
-    model, tokenizer = FastLanguageModel.from_pretrained(
-        model_name=config.model_name,
-        max_seq_length=config.max_seq_length,
-        load_in_4bit=True,
-        unsloth_tiled_mlp=True,
-        
-    )
-    
-    model = FastLanguageModel.get_peft_model(
-        model,
-        r=config.lora_r,
-        lora_alpha=config.lora_alpha,
-        lora_dropout=config.lora_dropout,
-        target_modules=["q_proj", "k_proj", "o_proj"],
-        bias="none",
-        use_gradient_checkpointing = "unsloth",
-        use_rslora = True,   # We support rank stabilized LoRA
-    )
-    
+    model, tokenizer = load_model(config)
+
     # 데이터 로드 및 전처리
     df = load_and_parse_data(config.train_data)
     processed_dataset = create_prompt_messages(df)
@@ -86,7 +105,7 @@ def main(config: TrainConfig):
         test_size=config.eval_ratio,
         seed=config.seed,
     )
-    
+
     # Data Collator 설정
     response_template = "<|im_start|>assistant"
     data_collator = CompletionOnlyDataCollator(
