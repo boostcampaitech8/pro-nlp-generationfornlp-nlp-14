@@ -1,9 +1,10 @@
-import sys
+import sys  # noqa: I001
+
 from unsloth import FastLanguageModel
 import evaluate
 import numpy as np
 import torch
-from peft import LoraConfig
+from peft import LoraConfig, get_peft_model
 from trl import SFTConfig, SFTTrainer
 
 from data.data_processing import (
@@ -13,8 +14,8 @@ from data.data_processing import (
     tokenize_dataset,
 )
 from models.model_loader import load_model_for_training, load_tokenizer
-from utils import TrainConfig, decode_labels, extract_choice_logits, setup_wandb
 from trainers.CompletionOnlyDataCollator import CompletionOnlyDataCollator
+from utils import TrainConfig, decode_labels, extract_choice_logits, setup_wandb
 
 
 def get_peft_config(r: int = 6, lora_alpha: int = 8, lora_dropout: float = 0.05):
