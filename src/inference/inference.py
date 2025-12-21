@@ -1,17 +1,17 @@
 import sys
 
 import pandas as pd
+from chains.nodes.mcq_head_nodes import (
+    create_choice_scorer,
+    create_forward,
+    decode_prediction,
+    format_rows,
+)
 from peft import AutoPeftModelForCausalLM
 from tqdm import tqdm
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
 from data.data_processing import create_test_prompt_messages, load_and_parse_data
-from inference.chains.nodes.mcq_head_nodes import (
-    create_choice_scorer,
-    create_forward,
-    decode_prediction,
-    format_row,
-)
 from utils import InferenceConfig
 
 
@@ -52,15 +52,18 @@ def main(config: InferenceConfig):
     llm = create_forward(model, tokenizer)
     compute = create_choice_scorer(tokenizer)
     # create chain
-    qa_chain = llm | compute | decode_prediction | format_row
+    qa_chain = llm | compute | decode_prediction | format_rows
     for data in tqdm(test_dataset, desc="Inference"):
         outs = qa_chain.invoke(data)
         infer_results.append(outs)
 
-    preds = map(list, zip(*infer_results, strict=True))
+    preds, score = map(list, zip(*infer_results, strict=True))
     # 결과 저장
     result_pred_df = pd.DataFrame(preds)
     result_pred_df.to_csv(config.output_path, index=False)
+    result_score_df = pd.DataFrame(score)
+    # NOTE config경로 뚫어줘야함
+    result_score_df.to_csv("outputs/scores.csv", index=False)
 
     print(f"Inference completed. Results saved to {config.output_path}")
     print(result_pred_df)
