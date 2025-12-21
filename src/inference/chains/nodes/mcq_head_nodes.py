@@ -39,11 +39,12 @@ def create_choice_scorer(tokenizer):
 def decode_prediction(ctx: dict) -> dict:
     data = ctx["data"]
     pred = logits_to_prediction(ctx["score"], data["len_choices"])
-    return {"data": data, "pred": pred}
+    return {"data": data, "score": ctx["score"], "pred": pred}
 
 
 @chain
-def format_row(ctx: dict):
+def format_rows(ctx: dict):
     data = ctx["data"]
     pred_row = {"id": data["id"], "answer": ctx["pred"]}
-    return pred_row
+    score_row = {"id": data["id"], "score": ctx["score"].tolist()}
+    return (pred_row, score_row)
