@@ -48,7 +48,7 @@ def compute_metrics(evaluation_result, tokenizer, acc_metric):
 
 
 def load_model(config):
-    model_name = config.mode_name
+    model_name = config.model_name
     try:
         model, tokenizer = FastLanguageModel.from_pretrained(
             model_name=model_name,
