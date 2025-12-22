@@ -47,11 +47,11 @@ def compute_metrics(evaluation_result, tokenizer, f1_metric):
         predictions=predictions,
         average="macro",
     )
-    
+
     # F1 metric 테스트를 위한 디버그 출력
     print(f"[DEBUG] compute_metrics 반환값: {f1}")
     print(f"[DEBUG] 반환값 타입: {type(f1)}, keys: {f1.keys() if isinstance(f1, dict) else 'N/A'}")
-    
+
     return f1
 
 
