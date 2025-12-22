@@ -17,7 +17,7 @@ cat /root/.ssh/id_ed25519_bob.pub
 
 ```bash
 touch /root/.ssh/config
-chmod 600 /root//.ssh/config
+chmod 600 /root/.ssh/config
 ```
 
 아래 예시와 같이 config 파일에 본인의 이름을 반영하여 추가합니다.  

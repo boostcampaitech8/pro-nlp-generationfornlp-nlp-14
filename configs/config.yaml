@@ -1,0 +1,64 @@
+# -------------------------------------------- #
+#                    학습 설정                   #
+# -------------------------------------------- #
+train:
+  # 모델 설정
+  model:
+    name: "beomi/gemma-ko-2b"
+
+  # 데이터 설정
+  data:
+    train_path: "data/train.csv"
+    eval_ratio: 0.1
+
+  # 학습 하이퍼파라미터
+  training:
+    output_dir: "outputs"
+    max_seq_length: 1024
+    batch_size: 1
+    epochs: 3
+    learning_rate: 2.0e-5
+    weight_decay: 0.01
+    logging_steps: 1
+    logging_strategy: "epoch"  # "steps", "epoch", "no"
+    seed: 42
+
+  # LoRA 설정
+  lora:
+    r: 6
+    alpha: 8
+    dropout: 0.05
+
+# -------------------------------------------- #
+#                    추론 설정                   #
+# -------------------------------------------- #
+
+inference:
+  # 모델 설정
+  model:
+    checkpoint_path: "beomi/gemma-ko-2b"   #실제 경로 or Hugging Face 모델명
+
+  # 데이터 설정
+  data:
+    test_path: "data/test.csv"
+
+  # 출력 설정
+  output:
+    path: "outputs/output.csv"
+
+# -------------------------------------------- #
+#                   wandb 설정                  #
+# -------------------------------------------- #
+wandb:
+  entity: "TeamAtoI"
+  project: "CSAT"
+  run_name: test # 자동생성, 이름 지정도 가능
+
+# -------------------------------------------- #
+#                     SCORE                    #
+# -------------------------------------------- #
+
+score:
+  # macro-f1
+  local: 0
+  public: 0

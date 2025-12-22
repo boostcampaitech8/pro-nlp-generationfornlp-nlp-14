@@ -10,6 +10,7 @@ data/PaxHeader/
 data/output.csv
 data/test.csv
 data/train.csv
+data/train_source_labeled.csv
 
 # project specific
 outputs/*
@@ -33,6 +34,7 @@ notebooks/baseline_code.ipynb
 
 # Ruff
 .ruff_cache/
+.mypy_cache/
 
 # 빌드 및 배포
 build/
