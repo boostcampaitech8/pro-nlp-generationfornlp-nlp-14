@@ -1,10 +1,11 @@
-import argparse
+import sys
 
 import evaluate
 import numpy as np
 import torch
 from peft import LoraConfig
 from trl import DataCollatorForCompletionOnlyLM, SFTConfig, SFTTrainer
+
 from data.data_processing import (
     create_prompt_messages,
     load_and_parse_data,
@@ -12,7 +13,7 @@ from data.data_processing import (
     tokenize_dataset,
 )
 from models.model_loader import load_model_for_training, load_tokenizer
-from utils.prediction import decode_labels, extract_choice_logits
+from utils import TrainConfig, decode_labels, extract_choice_logits, setup_wandb
 
 
 def get_peft_config(r: int = 6, lora_alpha: int = 8, lora_dropout: float = 0.05):
@@ -45,29 +46,36 @@ def compute_metrics(evaluation_result, tokenizer, acc_metric):
     return acc
 
 
-def main(args):
-    set_seed(args.seed)
+def main(config: TrainConfig):
+    """학습 메인 함수
+
+    Args:
+        config: 학습 설정 객체
+    """
+    set_seed(config.seed)
+
+    setup_wandb(config=config)
 
     # 모델 및 토크나이저 로드
-    model = load_model_for_training(args.model_name)
-    tokenizer = load_tokenizer(args.model_name)
+    model = load_model_for_training(config.model_name)
+    tokenizer = load_tokenizer(config.model_name)
 
     # 데이터 로드 및 전처리
-    df = load_and_parse_data(args.train_data)
+    df = load_and_parse_data(config.train_data)
     processed_dataset = create_prompt_messages(df)
     train_dataset, eval_dataset = tokenize_dataset(
         processed_dataset,
         tokenizer,
-        max_seq_length=args.max_seq_length,
-        test_size=args.eval_ratio,
-        seed=args.seed,
+        max_seq_length=config.max_seq_length,
+        test_size=config.eval_ratio,
+        seed=config.seed,
     )
 
     # LoRA 설정
     peft_config = get_peft_config(
-        r=args.lora_r,
-        lora_alpha=args.lora_alpha,
-        lora_dropout=args.lora_dropout,
+        r=config.lora_r,
+        lora_alpha=config.lora_alpha,
+        lora_dropout=config.lora_dropout,
     )
 
     # Data Collator 설정
@@ -85,19 +93,20 @@ def main(args):
         do_train=True,
         do_eval=True,
         lr_scheduler_type="cosine",
-        max_seq_length=args.max_seq_length,
-        output_dir=args.output_dir,
-        per_device_train_batch_size=args.batch_size,
-        per_device_eval_batch_size=args.batch_size,
-        num_train_epochs=args.epochs,
-        learning_rate=args.learning_rate,
-        weight_decay=args.weight_decay,
-        logging_steps=args.logging_steps,
+        max_seq_length=config.max_seq_length,
+        output_dir=config.output_dir,
+        per_device_train_batch_size=config.batch_size,
+        per_device_eval_batch_size=config.batch_size,
+        num_train_epochs=config.epochs,
+        learning_rate=config.learning_rate,
+        weight_decay=config.weight_decay,
+        logging_steps=config.logging_steps,
+        logging_strategy=config.logging_strategy,
         save_strategy="epoch",
         evaluation_strategy="epoch",
         save_total_limit=2,
         save_only_model=True,
-        report_to="none",
+        report_to="wandb",
     )
 
     # Trainer 설정
@@ -117,31 +126,15 @@ def main(args):
 
     # 학습 실행
     trainer.train()
-    print(f"Training completed. Model saved to {args.output_dir}")
+    print(f"Training completed. Model saved to {config.output_dir}")
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Train a model with LoRA")
-    parser.add_argument(
-        "--model_name", type=str, default="beomi/gemma-ko-2b", help="Model name or path"
-    )
-    parser.add_argument(
-        "--train_data", type=str, required=True, help="Path to training data CSV"
-    )
-    parser.add_argument(
-        "--output_dir", type=str, default="outputs_gemma", help="Output directory"
-    )
-    parser.add_argument("--max_seq_length", type=int, default=1024, help="Max sequence length")
-    parser.add_argument("--batch_size", type=int, default=1, help="Batch size")
-    parser.add_argument("--epochs", type=int, default=3, help="Number of epochs")
-    parser.add_argument("--learning_rate", type=float, default=2e-5, help="Learning rate")
-    parser.add_argument("--weight_decay", type=float, default=0.01, help="Weight decay")
-    parser.add_argument("--logging_steps", type=int, default=1, help="Logging steps")
-    parser.add_argument("--eval_ratio", type=float, default=0.1, help="Evaluation ratio")
-    parser.add_argument("--lora_r", type=int, default=6, help="LoRA r")
-    parser.add_argument("--lora_alpha", type=int, default=8, help="LoRA alpha")
-    parser.add_argument("--lora_dropout", type=float, default=0.05, help="LoRA dropout")
-    parser.add_argument("--seed", type=int, default=42, help="Random seed")
+    if len(sys.argv) < 2:
+        print("Usage: python train.py <config_path>")
+        print("Example: python train.py configs/config.yaml")
+        sys.exit(1)
 
-    args = parser.parse_args()
-    main(args)
+    config_path = sys.argv[1]
+    config = TrainConfig.from_yaml(config_path)
+    main(config)
