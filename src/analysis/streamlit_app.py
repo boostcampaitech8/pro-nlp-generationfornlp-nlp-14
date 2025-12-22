@@ -1,8 +1,18 @@
 import ast
+from pathlib import Path
 
 import altair as alt
 import pandas as pd
 import streamlit as st
+
+
+def get_csv_files(directory: str) -> list[str]:
+    """지정된 디렉토리에서 CSV 파일 목록을 반환한다."""
+    dir_path = Path(directory)
+    if not dir_path.exists():
+        return []
+    csv_files = sorted(dir_path.glob("*.csv"))
+    return [str(f) for f in csv_files]
 
 
 @st.cache_data
@@ -26,7 +36,7 @@ def parse_problem(problem_str: str) -> dict:
 
 def preprocess_data(train_df: pd.DataFrame, output_df: pd.DataFrame) -> pd.DataFrame:
     """Merge and preprocess the dataframes."""
-    merged_df = pd.merge(train_df, output_df, on="id", suffixes=("", "_pred"))
+    merged_df = pd.merge(train_df, output_df, on="id", suffixes=("_source", "_pred"))
 
     if "problems" in merged_df.columns:
         parsed_problems = merged_df["problems"].apply(parse_problem)
@@ -36,11 +46,17 @@ def preprocess_data(train_df: pd.DataFrame, output_df: pd.DataFrame) -> pd.DataF
 
         def check_correct(row):
             try:
-                return int(row["correct_answer"]) == int(row["answer"])
+                # 모델 예측값은 answer_pred 컬럼에 있음
+                pred_answer = row.get("answer_pred") if "answer_pred" in row else row.get("answer")
+                return int(row["correct_answer"]) == int(pred_answer)
             except (ValueError, TypeError):
                 return False
 
         merged_df["is_correct"] = merged_df.apply(check_correct, axis=1)
+        
+        # 예측값을 answer 컬럼으로 통일 (나머지 코드 호환성 유지)
+        if "answer_pred" in merged_df.columns:
+            merged_df["answer"] = merged_df["answer_pred"]
 
         # Calculate input length
         def calc_len(row):
@@ -62,17 +78,46 @@ def main():
     # 사이드바: 설정 및 필터
     # ==========================================
     st.sidebar.header("⚙️ 설정 (Configuration)")
-    data_path = st.sidebar.text_input("데이터 경로 (CSV)", "data/train.csv")
-    output_path = st.sidebar.text_input("모델 1 출력 경로 (CSV)", "outputs/Qwen2.5-32B_train.csv")
+
+    # data/ 디렉토리의 CSV 파일 목록 가져오기
+    data_files = get_csv_files("data")
+    if data_files:
+        data_path = st.sidebar.selectbox(
+            "데이터 경로 (CSV)",
+            options=data_files,
+            index=0,
+        )
+    else:
+        st.sidebar.warning("data/ 디렉토리에 CSV 파일이 없습니다.")
+        data_path = st.sidebar.text_input("데이터 경로 (CSV)", "data/train.csv")
+
+    # outputs/ 디렉토리의 CSV 파일 목록 가져오기
+    output_files = get_csv_files("outputs")
+    if output_files:
+        output_path = st.sidebar.selectbox(
+            "모델 1 출력 경로 (CSV)",
+            options=output_files,
+            index=0,
+        )
+    else:
+        st.sidebar.warning("outputs/ 디렉토리에 CSV 파일이 없습니다.")
+        output_path = st.sidebar.text_input("모델 1 출력 경로 (CSV)", "outputs/output.csv")
 
     # Multi-model comparison
     with st.sidebar.expander("🔄 모델 비교 (선택사항)"):
         enable_comparison = st.checkbox("다른 모델과 비교")
-        output_path_2 = (
-            st.text_input("모델 2 출력 경로 (CSV)", "outputs/model2.csv")
-            if enable_comparison
-            else None
-        )
+        if enable_comparison:
+            if output_files:
+                output_path_2 = st.selectbox(
+                    "모델 2 출력 경로 (CSV)",
+                    options=output_files,
+                    index=min(1, len(output_files) - 1),  # 두 번째 파일 또는 첫 번째 파일
+                    key="output_path_2",
+                )
+            else:
+                output_path_2 = st.text_input("모델 2 출력 경로 (CSV)", "outputs/model2.csv")
+        else:
+            output_path_2 = None
 
     if st.sidebar.button("데이터 로드 (Load Data)", type="primary"):
         st.session_state["load_data"] = True
