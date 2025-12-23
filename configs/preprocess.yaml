@@ -1,0 +1,26 @@
+# -------------------------------------------- #
+#                데이터 전처리 설정                #
+# -------------------------------------------- #
+
+preprocess:
+  # 입력 파일
+  input:
+    train_file: 'data/train.csv'
+
+  # 중간 및 최종 출력 파일
+  output:
+    # labeld 파일
+    source_labeled_file: 'data/train_source_labeled.csv'
+    # Tran + Eval
+    with_folds_file: 'data/train_with_folds.csv'
+    # Train Split
+    train_split_file: 'data/train_split.csv'
+    # Eval Split
+    eval_split_file: 'data/eval_split.csv'
+
+  # Stratified Group K-Fold 설정
+  sgkfold:
+    n_splits: 5
+    # 0-indexed, 평가용으로 사용할 fold
+    eval_fold: 4
+    random_seed: 42
