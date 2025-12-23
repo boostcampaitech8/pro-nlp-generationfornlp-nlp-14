@@ -84,9 +84,11 @@ def main(config: InferenceConfig):
     # 결과 저장
     result_pred_df = pd.DataFrame(preds)
     result_pred_df.to_csv(config.output_path, index=False)
+
+    # score 저장
+    output_socore_path = config.output_path.replace('.csv', '.score.csv')
     result_score_df = pd.DataFrame(score)
-    # NOTE config경로 뚫어줘야함
-    result_score_df.to_csv("outputs/scores.csv", index=False)
+    result_score_df.to_csv(output_socore_path, index=False)
 
     print(f"Inference completed. Results saved to {config.output_path}")
     print(result_pred_df)
