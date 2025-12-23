@@ -2,13 +2,18 @@ import sys  # noqa: I001
 from unsloth import FastLanguageModel
 
 import pandas as pd
-import torch
+from chains.nodes.mcq_head_nodes import (
+    create_choice_scorer,
+    create_forward,
+    decode_prediction,
+    format_rows,
+)
 from peft import AutoPeftModelForCausalLM
 from tqdm import tqdm
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
 from data.data_processing import create_test_prompt_messages, load_and_parse_data
-from utils import InferenceConfig, get_choice_token_ids, logits_to_prediction
+from utils import InferenceConfig
 
 
 def load_model(model_path: str):
@@ -66,34 +71,25 @@ def main(config: InferenceConfig):
     # 추론 실행
     infer_results = []
 
-    with torch.inference_mode():
-        for data in tqdm(test_dataset, desc="Inference"):
-            _id = data["id"]
-            messages = data["messages"]
-            len_choices = data["len_choices"]
+    # 의존성있는 node들 생성
+    llm = create_forward(model, tokenizer)
+    compute = create_choice_scorer(tokenizer)
+    # create chain
+    qa_chain = llm | compute | decode_prediction | format_rows
+    for data in tqdm(test_dataset, desc="Inference"):
+        outs = qa_chain.invoke(data)
+        infer_results.append(outs)
 
-            outputs = model(
-                tokenizer.apply_chat_template(
-                    messages,
-                    tokenize=True,
-                    add_generation_prompt=True,
-                    return_tensors="pt",
-                ).to("cuda")
-            )
-
-            logits = outputs.logits[:, -1].flatten().cpu()
-
-            choice_ids = get_choice_token_ids(tokenizer, len_choices)
-            target_logits = torch.tensor([logits[idx] for idx in choice_ids])
-
-            predict_value = logits_to_prediction(target_logits, len_choices)
-            infer_results.append({"id": _id, "answer": predict_value})
-
+    preds, score = map(list, zip(*infer_results, strict=True))
     # 결과 저장
-    result_df = pd.DataFrame(infer_results)
-    result_df.to_csv(config.output_path, index=False)
+    result_pred_df = pd.DataFrame(preds)
+    result_pred_df.to_csv(config.output_path, index=False)
+    result_score_df = pd.DataFrame(score)
+    # NOTE config경로 뚫어줘야함
+    result_score_df.to_csv("outputs/scores.csv", index=False)
+
     print(f"Inference completed. Results saved to {config.output_path}")
-    print(result_df)
+    print(result_pred_df)
 
 
 if __name__ == "__main__":
