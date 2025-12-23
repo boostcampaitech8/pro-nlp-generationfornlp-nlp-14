@@ -174,3 +174,63 @@ class InferenceConfig(BaseConfig):
         "data_test_path": "test_data",
         "output_path": "output_path",
     }
+
+
+@dataclass
+class SubjectClassifierConfig(BaseConfig):
+    """Subject 분류기 설정
+
+    configs/config.yaml의 subject_classifier 섹션에서 설정을 로드함.
+    """
+
+    _yaml_sections: ClassVar[list[str]] = ["subject_classifier"]
+
+    # 활성화 여부
+    enabled: bool
+
+    # 임베딩 설정
+    embedding_provider: str
+    embedding_model: str
+    embedding_batch_size: int
+
+    # 분류기 설정
+    classifier_type: str
+
+    # kNN 설정
+    knn_n_neighbors: int
+    knn_metric: str
+    knn_weights: str
+
+    # SVM 설정
+    svm_kernel: str
+    svm_c: float
+    svm_probability: bool
+
+    # 경로 설정
+    embeddings_cache: str
+    classifier_model: str
+    label_encoder: str
+    train_data: str
+
+    _yaml_key_mapping: ClassVar[dict[str, str]] = {
+        "enabled": "enabled",
+        # 임베딩 설정
+        "embedding_provider": "embedding_provider",
+        "embedding_model": "embedding_model",
+        "embedding_batch_size": "embedding_batch_size",
+        # 분류기 설정
+        "classifier_type": "classifier_type",
+        # kNN 설정
+        "classifier_knn_n_neighbors": "knn_n_neighbors",
+        "classifier_knn_metric": "knn_metric",
+        "classifier_knn_weights": "knn_weights",
+        # SVM 설정
+        "classifier_svm_kernel": "svm_kernel",
+        "classifier_svm_C": "svm_c",
+        "classifier_svm_probability": "svm_probability",
+        # 경로 설정
+        "paths_embeddings_cache": "embeddings_cache",
+        "paths_classifier_model": "classifier_model",
+        "paths_label_encoder": "label_encoder",
+        "train_data": "train_data",
+    }
