@@ -5,14 +5,18 @@ import os
 # 서드파티 라이브러리 (Third-party Library)
 import numpy as np
 import pandas as pd
+import yaml
 from dotenv import load_dotenv
 from openai import OpenAI
 from tqdm import tqdm
+from utils import PreprocessConfig
+
+# 설정 로드 (객체 지향 방식)
+config = PreprocessConfig.from_yaml('configs/config.yaml')
 
 # .env 파일에서 환경 변수 로드 (API KEY 등)
 load_dotenv()
 api_key = os.getenv("OPENAI_API_KEY")
-
 client = OpenAI(api_key=api_key)
 
 def split_paragraph_and_plus(paragraph):
@@ -62,7 +66,7 @@ def split_paragraph_and_plus(paragraph):
         return paragraph, np.nan
 
 # 데이터 로드
-df = pd.read_csv('data/train.csv')
+df = pd.read_csv(config.input_path)
 
 # tqdm 진행바 활성화
 tqdm.pandas()
@@ -72,7 +76,8 @@ df[['paragraph', 'question_plus']] = df.progress_apply(
     lambda x: split_paragraph_and_plus(x['paragraph']), axis=1, result_type='expand'
 )
 
-# 파일 저장 (index=False 권장)
-df.to_csv("data/train_sperate_question_plus.csv", index=False, encoding='utf-8-sig')
+# 파일 저장
+final_output = config.output_path
+df.to_csv(final_output, index=False)
 
 print("작업 완료 및 파일 저장 성공!")

@@ -24,6 +24,9 @@ help:
 	@echo "  make typecheck  - 타입 검사 (mypy)"
 	@echo "  make check      - 모든 코드 품질 검사"
 	@echo ""
+	@echo "   === 데이터 전처리 ==="
+	@echo "   make preprocess  - 지문/보기 분리 전처리 ($(CONFIG))"
+	@echo ""
 	@echo "  === 학습/추론 ==="
 	@echo "  make train                          - 모델 학습 ($(CONFIG))"
 	@echo "  make train CONFIG=path.yaml         - 커스텀 config로 학습"
@@ -53,6 +56,10 @@ typecheck:
 	uv run mypy src/
 
 check: lint typecheck
+
+# 데이터 전처리
+preprocess:
+	uv run python src/data/seperate_question_plus.py
 
 # 학습/추론
 train:

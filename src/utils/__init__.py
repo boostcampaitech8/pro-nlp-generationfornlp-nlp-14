@@ -12,6 +12,7 @@
 from utils.config_loader import (
     InferenceConfig,
     TrainConfig,
+    PreprocessConfig
 )
 
 # 상수
@@ -39,6 +40,7 @@ __all__ = [
     # Config 클래스
     "TrainConfig",
     "InferenceConfig",
+    "PreprocessConfig"
     # 예측 함수
     "get_choice_token_ids",
     "extract_choice_logits",

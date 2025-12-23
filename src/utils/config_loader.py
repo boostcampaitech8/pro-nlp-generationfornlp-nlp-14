@@ -19,7 +19,6 @@ from abc import ABC
 from dataclasses import dataclass, fields
 from pathlib import Path
 from typing import Any, ClassVar
-
 import yaml
 from typing_extensions import Self
 
@@ -174,3 +173,22 @@ class InferenceConfig(BaseConfig):
         "data_test_path": "test_data",
         "output_path": "output_path",
     }
+
+@dataclass
+class PreprocessConfig:
+    input_path: str
+    output_path: str
+
+    @classmethod
+    def from_yaml(cls, yaml_path: str):
+        with open(yaml_path, "r", encoding="utf-8") as f:
+            config_dict = yaml.safe_load(f)
+        
+        # YAML의 preprocess 섹션 추출
+        preprocess_data = config_dict.get("preprocess", {})
+        
+        return cls(
+            input_path=preprocess_data.get("input"),
+            output_path=preprocess_data.get("output")
+        )
+    
