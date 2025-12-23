@@ -29,6 +29,8 @@ train:
     alpha: 8
     dropout: 0.05
 
+  
+
 # -------------------------------------------- #
 #                    추론 설정                   #
 # -------------------------------------------- #
@@ -37,6 +39,10 @@ inference:
   # 모델 설정
   model:
     checkpoint_path: "beomi/gemma-ko-2b"   #실제 경로 or Hugging Face 모델명
+  
+  # only use FastLanguage Model
+  FLM:
+      max_seq_length: 1024
 
   # 데이터 설정
   data:
@@ -62,3 +68,40 @@ score:
   # macro-f1
   local: 0
   public: 0
+
+# -------------------------------------------- #
+#              Subject 분류 설정                 #
+# -------------------------------------------- #
+subject_classifier:
+  enabled: true
+
+  # 임베딩 설정
+  embedding:
+    provider: "openai"
+    model: "text-embedding-3-small"
+    batch_size: 100
+
+  # 분류기 설정
+  classifier:
+    type: "knn"  # "knn" | "svm" - 실험 후 선택
+
+    # kNN 설정
+    knn:
+      n_neighbors: 5
+      metric: "cosine"
+      weights: "distance"
+
+    # SVM 설정
+    svm:
+      kernel: "rbf"
+      C: 1.0
+      probability: true
+
+  # 경로 설정
+  paths:
+    embeddings_cache: "data/embeddings"
+    classifier_model: "data/classifier/subject_classifier.pkl"
+    label_encoder: "data/classifier/label_encoder.pkl"
+
+  # 학습 데이터 경로
+  train_data: "data/train_source_labeled.csv"
