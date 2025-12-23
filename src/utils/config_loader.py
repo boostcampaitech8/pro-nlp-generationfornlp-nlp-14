@@ -166,6 +166,9 @@ class InferenceConfig(BaseConfig):
     # 데이터 설정
     test_data: str
 
+    # FLM ONLY 토큰 길이 설정
+    max_seq_length: int
+
     # 출력 설정
     output_path: str
 
@@ -173,4 +176,5 @@ class InferenceConfig(BaseConfig):
         "model_checkpoint_path": "checkpoint_path",
         "data_test_path": "test_data",
         "output_path": "output_path",
+        "FLM_max_seq_length" : "max_seq_length"
     }

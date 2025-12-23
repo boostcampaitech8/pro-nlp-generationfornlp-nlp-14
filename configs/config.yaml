@@ -42,6 +42,10 @@ inference:
   data:
     test_path: "data/test.csv"
 
+  # Only use FastLanguage Model
+  FLM:
+    max_seq_length: 4096
+
   # 출력 설정
   output:
     path: "outputs/output.csv"
