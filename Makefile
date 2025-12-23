@@ -61,6 +61,10 @@ train:
 inference:
 	uv run python src/inference/inference.py $(CONFIG)
 
+# 결과 분석
+analysis:
+	uv run streamlit run src/analysis/streamlit_app.py
+
 # 정리
 clean:
 	find . -type d -name "__pycache__" -prune -exec rm -rf {} +

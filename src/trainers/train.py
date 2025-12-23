@@ -35,7 +35,7 @@ def preprocess_logits_for_metrics(logits, labels, tokenizer):
     return extract_choice_logits(logits, tokenizer, position=-2)
 
 
-def compute_metrics(evaluation_result, tokenizer, acc_metric):
+def compute_metrics(evaluation_result, tokenizer, f1_metric):
     """metric 계산 함수"""
     logits, labels = evaluation_result
     labels = decode_labels(labels, tokenizer)
@@ -43,8 +43,16 @@ def compute_metrics(evaluation_result, tokenizer, acc_metric):
     probs = torch.nn.functional.softmax(torch.tensor(logits), dim=-1)
     predictions = np.argmax(probs, axis=-1)
 
-    acc = acc_metric.compute(predictions=predictions, references=labels)
-    return acc
+    f1 = f1_metric.compute(
+        references=labels,
+        predictions=predictions,
+        average="macro",
+    )
+
+    # F1 metric 테스트를 위한 디버그 출력
+    # print(f"[DEBUG] compute_metrics 반환값: {f1}")
+
+    return f1
 
 
 def load_model(config):
@@ -114,7 +122,7 @@ def main(config: TrainConfig):
     )
 
     # Metric 설정
-    acc_metric = evaluate.load("accuracy")
+    f1_metric = evaluate.load("f1")
 
     # SFT Config 설정
     sft_config = SFTConfig(
@@ -145,7 +153,7 @@ def main(config: TrainConfig):
         eval_dataset=eval_dataset,
         data_collator=data_collator,
         processing_class=tokenizer,
-        compute_metrics=lambda x: compute_metrics(x, tokenizer, acc_metric),
+        compute_metrics=lambda x: compute_metrics(x, tokenizer, f1_metric),
         preprocess_logits_for_metrics=lambda logits, labels: preprocess_logits_for_metrics(
             logits, labels, tokenizer
         ),
