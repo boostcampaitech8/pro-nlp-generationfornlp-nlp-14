@@ -16,7 +16,7 @@ from data.data_processing import create_test_prompt_messages, load_and_parse_dat
 from utils import InferenceConfig
 
 
-def load_model(model_path: str):
+def load_model(model_path: str, max_seq_length: int | None = None):
     """checkpoint 경로에 따라 모델/토크나이저를 로드한다."""
     try:
         model, tokenizer = FastLanguageModel.from_pretrained(
@@ -55,7 +55,7 @@ def main(config: InferenceConfig):
     Args:
         config: 추론 설정 객체
     """
-    model, tokenizer = load_model(config.checkpoint_path)
+    model, tokenizer = load_model(config.checkpoint_path, config.mex_seq_length)
 
     # 테스트 데이터 로드 및 전처리
     test_df = load_and_parse_data(config.test_data)
