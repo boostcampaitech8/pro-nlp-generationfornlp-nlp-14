@@ -6,11 +6,7 @@ __pycache__/
 .Python
 
 # data - real
-data/PaxHeader/
-data/output.csv
-data/test.csv
-data/train.csv
-data/train_source_labeled.csv
+/data/*
 
 # project specific
 outputs/*
