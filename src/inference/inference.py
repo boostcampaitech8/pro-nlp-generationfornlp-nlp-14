@@ -18,23 +18,16 @@ from utils import InferenceConfig
 
 def load_model(model_path: str):
     """checkpoint 경로에 따라 모델/토크나이저를 로드한다."""
-    # NOTE: config.yaml로 분리할지 논의 필요
-    FLM_SUPPORT_MODELS = "unsloth"
-    # FIXME: why it return True always
-    is_fast_candidate = any(k in model_path.lower() for k in FLM_SUPPORT_MODELS)
-    if is_fast_candidate:
-        print("--" * 10, "TRY USE UNSLOTH", "--" * 10)
-        try:
-            model, tokenizer = FastLanguageModel.from_pretrained(
-                # NOTE: max_seq_length 설정 필요 기본값 2048
-                model_name=model_path,
-                load_in_4bit=True,
-            )
-            FastLanguageModel.for_inference(model)
-            return model, tokenizer
-        except Exception as e:
-            # Fast 경로 실패 시 기본 로더로 폴백
-            print(f"FastLanguageModel load failed, fallback to HF loader. reason={e}")
+    try:
+        model, tokenizer = FastLanguageModel.from_pretrained(
+            model_name=model_path,
+            load_in_4bit=True,
+        )
+        FastLanguageModel.for_inference(model)
+        return model, tokenizer
+    except Exception as e:
+        # Fast 경로 실패 시 기본 로더로 폴백
+        print(f"[WARN]: FastLanguageModel load failed, fallback to HF loader. reason={e}")
 
     if model_path[:7] == "outputs":
         model = AutoPeftModelForCausalLM.from_pretrained(
