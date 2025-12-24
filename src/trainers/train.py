@@ -82,7 +82,6 @@ def load_model(config):
     model = load_model_for_training(model_name)
     tokenizer = load_tokenizer(model_name)
     lora_config = get_peft_config(
-        model,
         r=config.lora_r,
         lora_alpha=config.lora_alpha,
         lora_dropout=config.lora_dropout,
