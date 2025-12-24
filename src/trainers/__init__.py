@@ -1,5 +1,6 @@
 """Trainers module for Generation for NLP."""
 
+from trainers.CompletionOnlyDataCollator import CompletionOnlyDataCollator
 from trainers.train import (
     compute_metrics,
     get_peft_config,
@@ -12,4 +13,5 @@ __all__ = [
     "get_peft_config",
     "main",
     "preprocess_logits_for_metrics",
+    "CompletionOnlyDataCollator"
 ]

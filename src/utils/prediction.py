@@ -55,5 +55,5 @@ def decode_labels(labels: np.ndarray, tokenizer) -> list[int]:
     """
     cleaned_labels = np.where(labels != -100, labels, tokenizer.pad_token_id)
     decoded_labels = tokenizer.batch_decode(cleaned_labels, skip_special_tokens=True)
-    parsed_labels = [x.split("<end_of_turn>")[0].strip() for x in decoded_labels]
+    parsed_labels = [x.split("\n<think>\n\n</think>\n\n")[-1].strip() for x in decoded_labels]
     return [STR_TO_INT_MAP[x] for x in parsed_labels]

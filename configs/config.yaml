@@ -13,7 +13,7 @@ preprocess:
 train:
   # 모델 설정
   model:
-    name: "beomi/gemma-ko-2b"
+    name: "unsloth/Qwen2.5-32B-Instruct-bnb-4bit"
 
   # 데이터 설정
   data:
@@ -23,8 +23,8 @@ train:
   # 학습 하이퍼파라미터
   training:
     output_dir: "outputs"
-    max_seq_length: 1024
-    batch_size: 1
+    max_seq_length: 4096
+    batch_size: 16
     epochs: 3
     learning_rate: 2.0e-5
     weight_decay: 0.01
@@ -45,11 +45,15 @@ train:
 inference:
   # 모델 설정
   model:
-    checkpoint_path: "beomi/gemma-ko-2b"   #실제 경로 or Hugging Face 모델명
+    checkpoint_path: "unsloth/Qwen2.5-32B-Instruct-bnb-4bit"   #실제 경로 or Hugging Face 모델명
 
   # 데이터 설정
   data:
     test_path: "data/test.csv"
+
+  # Only use FastLanguage Model
+  FLM:
+    max_seq_length: 4096
 
   # 출력 설정
   output:

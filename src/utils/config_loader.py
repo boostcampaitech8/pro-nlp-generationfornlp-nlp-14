@@ -77,6 +77,7 @@ class BaseConfig(ABC):
 
         return cls(**kwargs)
 
+
 @dataclass
 class TrainConfig(BaseConfig):
     """학습 설정
@@ -165,6 +166,9 @@ class InferenceConfig(BaseConfig):
     # 데이터 설정
     test_data: str
 
+    # FLM ONLY 토큰 길이 설정
+    max_seq_length: int
+
     # 출력 설정
     output_path: str
 
@@ -172,6 +176,45 @@ class InferenceConfig(BaseConfig):
         "model_checkpoint_path": "checkpoint_path",
         "data_test_path": "test_data",
         "output_path": "output_path",
+        "FLM_max_seq_length" : "max_seq_length"
+    }
+
+
+@dataclass
+class PreprocessConfig(BaseConfig):
+    """전처리 설정
+
+    configs/preprocess.yaml의 preprocess 섹션에서 설정을 로드함.
+    """
+
+    _yaml_sections: ClassVar[list[str]] = ["preprocess"]
+
+    # 입력 파일
+    train_file: str
+
+    # 출력 파일
+    source_labeled_file: str
+    with_folds_file: str
+    train_split_file: str
+    eval_split_file: str
+
+    # SGKFold 설정
+    n_splits: int
+    eval_fold: int
+    random_seed: int
+
+    _yaml_key_mapping: ClassVar[dict[str, str]] = {
+        # input 섹션
+        "input_train_file": "train_file",
+        # output 섹션
+        "output_source_labeled_file": "source_labeled_file",
+        "output_with_folds_file": "with_folds_file",
+        "output_train_split_file": "train_split_file",
+        "output_eval_split_file": "eval_split_file",
+        # sgkfold 섹션
+        "sgkfold_n_splits": "n_splits",
+        "sgkfold_eval_fold": "eval_fold",
+        "sgkfold_random_seed": "random_seed",
     }
 
 @dataclass
