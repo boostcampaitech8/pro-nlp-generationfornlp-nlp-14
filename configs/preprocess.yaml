@@ -22,5 +22,5 @@ preprocess:
   sgkfold:
     n_splits: 5
     # 0-indexed, 평가용으로 사용할 fold
-    eval_fold: 4
+    eval_fold: 3
     random_seed: 42
