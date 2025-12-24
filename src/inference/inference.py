@@ -21,6 +21,7 @@ def load_model(model_path: str, max_seq_length: int | None = None):
     try:
         model, tokenizer = FastLanguageModel.from_pretrained(
             model_name=model_path,
+            max_seq_length=max_seq_length,
             load_in_4bit=True,
         )
         FastLanguageModel.for_inference(model)
