@@ -55,7 +55,7 @@ def main(config: InferenceConfig):
     Args:
         config: 추론 설정 객체
     """
-    model, tokenizer = load_model(config.checkpoint_path, config.mex_seq_length)
+    model, tokenizer = load_model(config.checkpoint_path, config.max_seq_length)
 
     # 테스트 데이터 로드 및 전처리
     test_df = load_and_parse_data(config.test_data)
