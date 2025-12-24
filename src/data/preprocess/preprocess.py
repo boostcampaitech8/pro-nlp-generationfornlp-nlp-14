@@ -6,17 +6,15 @@ from data.preprocess.source_tagger import add_source_labels
 from utils.config_loader import PreprocessConfig
 
 
-def run_preprocessing(config_path: str | Path) -> None:
+def main(config: PreprocessConfig) -> None:
     """
     데이터 전처리 파이프라인 실행
     1. 소스 태깅: train.csv -> train_source_labeled.csv
     2. Fold 분할: train_source_labeled.csv -> train_with_folds.csv
 
     Args:
-        config_path: preprocess.yaml 경로
+        config: 전처리 설정 객체
     """
-    # 설정 로드
-    config = PreprocessConfig.from_yaml(config_path)
 
     print("=" * 70)
     print("데이터 전처리 파이프라인 시작")
@@ -73,24 +71,12 @@ def run_preprocessing(config_path: str | Path) -> None:
     print("=" * 70)
 
 
-def main():
-    """CLI 진입점"""
+if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print("사용법: make preprocess")
-        print("예시: make preprocess")
+        print("Usage: python preprocess.py <config_path>")
+        print("Example: python preprocess.py configs/preprocess.yaml")
         sys.exit(1)
 
     config_path = sys.argv[1]
-
-    try:
-        run_preprocessing(config_path)
-    except Exception as e:
-        print(f"\n❌ 오류 발생: {e}", file=sys.stderr)
-        import traceback
-
-        traceback.print_exc()
-        sys.exit(1)
-
-
-if __name__ == "__main__":
-    main()
+    config = PreprocessConfig.from_yaml(config_path)
+    main(config)
