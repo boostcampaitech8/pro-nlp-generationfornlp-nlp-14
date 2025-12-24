@@ -70,7 +70,7 @@ def load_model(config):
             r=config.lora_r,
             lora_alpha=config.lora_alpha,
             lora_dropout=config.lora_dropout,
-            target_modules=["q_proj", "k_proj", "o_proj"],
+            target_modules=["q_proj", "k_proj", "v_proj"],
             bias="none",
             use_gradient_checkpointing="unsloth",
             use_rslora=True,  # We support rank stabilized LoRA
