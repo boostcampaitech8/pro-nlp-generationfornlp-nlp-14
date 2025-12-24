@@ -1,4 +1,4 @@
-.PHONY: help install dev lint format typecheck check clean clean-cache clean-all train inference embedding subject-train subject-predict
+.PHONY: help install dev lint format typecheck check clean clean-cache clean-all train inference embedding embedding-viz subject-train subject-predict
 
 # Python path 설정
 PYTHONPATH := $(shell pwd)/src
@@ -31,6 +31,9 @@ help:
 	@echo ""
 	@echo "  === Subject 분류 ==="
 	@echo "  make embedding                      - 임베딩 생성"
+	@echo "  make embedding-viz                  - 임베딩 시각화 (UMAP)"
+	@echo "  make embedding-viz METHOD=tsne      - 임베딩 시각화 (t-SNE)"
+	@echo "  make embedding-viz METHOD=pca       - 임베딩 시각화 (PCA)"
 	@echo "  make subject-train                  - Subject 분류기 학습"
 	@echo "  make subject-predict                - Subject 분류 예측"
 	@echo ""
@@ -67,8 +70,13 @@ inference:
 	uv run python src/inference/inference.py $(CONFIG)
 
 # Subject 분류
+METHOD := umap
+
 embedding:
 	uv run python src/embedding/run_embedding.py $(CONFIG)
+
+embedding-viz:
+	uv run python src/embedding/run_visualize.py $(CONFIG) --method $(METHOD)
 
 subject-train:
 	uv run python src/subject/trainer.py $(CONFIG)
