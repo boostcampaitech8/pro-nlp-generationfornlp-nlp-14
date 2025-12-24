@@ -14,6 +14,7 @@ from data.data_processing import (
     tokenize_dataset,
 )
 from models.model_loader import load_model_for_training, load_tokenizer
+from prompts import get_prompt_manager
 from trainers.CompletionOnlyDataCollator import CompletionOnlyDataCollator
 from utils import TrainConfig, decode_labels, extract_choice_logits, setup_wandb
 
@@ -104,7 +105,8 @@ def main(config: TrainConfig):
 
     # 데이터 로드 및 전처리
     df = load_and_parse_data(config.train_data)
-    processed_dataset = create_prompt_messages(df)
+    prompt_manager = get_prompt_manager(config.prompt_style)
+    processed_dataset = create_prompt_messages(df, prompt_manager)
     train_dataset, eval_dataset = tokenize_dataset(
         processed_dataset,
         tokenizer,

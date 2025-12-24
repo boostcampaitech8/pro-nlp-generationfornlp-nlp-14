@@ -93,6 +93,7 @@ class TrainConfig(BaseConfig):
 
     # 데이터 설정
     train_data: str
+    prompt_style: str
     eval_ratio: float
 
     # 학습 설정
@@ -120,6 +121,7 @@ class TrainConfig(BaseConfig):
         # train 섹션
         "model_name": "model_name",
         "data_train_path": "train_data",
+        "data_prompt_style": "prompt_style",
         "data_eval_ratio": "eval_ratio",
         "training_output_dir": "output_dir",
         "training_max_seq_length": "max_seq_length",
@@ -166,6 +168,7 @@ class InferenceConfig(BaseConfig):
 
     # 데이터 설정
     test_data: str
+    prompt_style: str
 
     # FLM ONLY 토큰 길이 설정
     max_seq_length: int
@@ -176,8 +179,9 @@ class InferenceConfig(BaseConfig):
     _yaml_key_mapping: ClassVar[dict[str, str]] = {
         "model_checkpoint_path": "checkpoint_path",
         "data_test_path": "test_data",
+        "data_prompt_style": "prompt_style",
         "output_path": "output_path",
-        "FLM_max_seq_length" : "max_seq_length"
+        "FLM_max_seq_length": "max_seq_length",
     }
 
 

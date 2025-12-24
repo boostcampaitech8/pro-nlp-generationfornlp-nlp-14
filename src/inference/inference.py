@@ -13,6 +13,7 @@ from tqdm import tqdm
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
 from data.data_processing import create_test_prompt_messages, load_and_parse_data
+from prompts import get_prompt_manager
 from utils import InferenceConfig
 
 
@@ -60,7 +61,8 @@ def main(config: InferenceConfig):
 
     # 테스트 데이터 로드 및 전처리
     test_df = load_and_parse_data(config.test_data)
-    test_dataset = create_test_prompt_messages(test_df)
+    prompt_manager = get_prompt_manager(config.prompt_style)
+    test_dataset = create_test_prompt_messages(test_df, prompt_manager)
 
     # 추론 실행
     infer_results = []
@@ -80,7 +82,7 @@ def main(config: InferenceConfig):
     result_pred_df.to_csv(config.output_path, index=False)
 
     # score 저장
-    output_socore_path = config.output_path.replace('.csv', '.score.csv')
+    output_socore_path = config.output_path.replace(".csv", ".score.csv")
     result_score_df = pd.DataFrame(score)
     result_score_df.to_csv(output_socore_path, index=False)
 
