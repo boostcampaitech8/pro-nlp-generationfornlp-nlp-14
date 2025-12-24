@@ -20,8 +20,11 @@ def manual_adjust_minority_subjects(
     """
     fold_assignment = fold_assignment.copy()
 
-    # high_school_geography 처리
+    # 마스크 선언
     geo_mask = df["subject"] == "high_school_geography"
+    gov_mask = df["subject"] == "high_school_government_and_politics"
+
+    # high_school_geography 처리
     if geo_mask.sum() > 0:
         geo_indices = df[geo_mask].index.tolist()
         np.random.seed(random_seed)
@@ -37,7 +40,6 @@ def manual_adjust_minority_subjects(
                     fold_assignment[idx] = (fold_assignment[idx] + 1) % n_splits
 
     # high_school_government_and_politics 처리
-    gov_mask = df["subject"] == "high_school_government_and_politics"
     if gov_mask.sum() > 0:
         gov_indices = df[gov_mask].index.tolist()
         np.random.seed(random_seed + 1)
@@ -74,6 +76,7 @@ def balance_minority_labels(
     )
     df_temp["fold"] = fold_assignment
 
+    # 마스크 선언
     target_mask = df_temp["answer"] == target_label
 
     if target_mask.sum() == 0:
