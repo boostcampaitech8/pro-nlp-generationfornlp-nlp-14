@@ -29,8 +29,6 @@ train:
     alpha: 8
     dropout: 0.05
 
-  
-
 # -------------------------------------------- #
 #                    추론 설정                   #
 # -------------------------------------------- #
@@ -39,10 +37,6 @@ inference:
   # 모델 설정
   model:
     checkpoint_path: "beomi/gemma-ko-2b"   #실제 경로 or Hugging Face 모델명
-  
-  # only use FastLanguage Model
-  FLM:
-      max_seq_length: 1024
 
   # 데이터 설정
   data:
