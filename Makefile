@@ -29,6 +29,10 @@ help:
 	@echo "  make train CONFIG=path.yaml         - 커스텀 config로 학습"
 	@echo "  make inference                      - 모델 추론 ($(CONFIG))"
 	@echo ""
+	@echo "  === 데이터 전처리 ==="
+	@echo "  make preprocess                     - 데이터 전처리 (소스 태깅 + Fold 분할)"
+	@echo "  make preprocess CONFIG=path.yaml    - 커스텀 config로 전처리"
+	@echo ""
 	@echo "  === 정리 ==="
 	@echo "  make clean       - Python 캐시 삭제"
 	@echo "  make clean-cache - 툴 캐시 삭제"
@@ -60,6 +64,10 @@ train:
 
 inference:
 	uv run python src/inference/inference.py $(CONFIG)
+
+# 데이터 전처리 (소스 태깅 + Fold 분할)
+preprocess:
+	uv run python src/data/preprocess/preprocess.py configs/preprocess.yaml
 
 # 결과 분석
 analysis:
