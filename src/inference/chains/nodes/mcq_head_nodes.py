@@ -4,7 +4,7 @@ from langchain_core.runnables import chain
 from utils import get_choice_token_ids, logits_to_prediction
 
 
-def create_forward(model, tokenizer):
+def create_local_forward(model, tokenizer):
     device = next(model.parameters()).device
 
     @chain
@@ -30,9 +30,10 @@ def create_choice_scorer(tokenizer):
         logits = outputs.logits[:, -1].flatten().cpu()
         choice_ids = get_choice_token_ids(tokenizer, len_choices)
         target_logits = logits[choice_ids]
-        return {"data": data, "score": target_logits}
+        return {"data": data, "outputs": target_logits}
 
-    return choice_scorer
+    return forward
+
 
 
 @chain
