@@ -6,7 +6,7 @@ from tqdm import tqdm
 
 from data.data_processing import create_test_prompt_messages, load_and_parse_data
 from utils import InferenceConfig
-from chains.mcq_chain import create_local_mcq_chain
+from chains.mcq_chain import create_remote_mcq_chain
 
 
 def main(config: InferenceConfig):
@@ -24,7 +24,14 @@ def main(config: InferenceConfig):
     infer_results = []
 
     # create chain
-    qa_chain = create_local_mcq_chain(config)
+
+    # with lcoal
+    # qa_chain = create_local_mcq_chain(config)
+
+    # with remote
+    # qa_chain = create_remote_mcq_chain(config)
+
+    qa_chain = create_remote_mcq_chain(config)
     for data in tqdm(test_dataset, desc="Inference"):
         outs = qa_chain.invoke(data)
         infer_results.append(outs)

@@ -1,4 +1,5 @@
 from .mcq_head_nodes import (
+    create_llamacpp_forward,
     create_local_forward,
     decode_prediction,
     format_rows,
@@ -6,6 +7,7 @@ from .mcq_head_nodes import (
 
 __all__ = [
     "create_local_forward",
+    "create_llamacpp_forward",
     "decode_prediction",
     "format_rows",
 ]
