@@ -27,6 +27,7 @@ notebooks/baseline_code.ipynb
 *.swp
 *.swo
 *~
+.vscode/launch.json
 
 # Ruff
 .ruff_cache/
