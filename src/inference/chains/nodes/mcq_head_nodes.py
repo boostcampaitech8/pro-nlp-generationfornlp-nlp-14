@@ -1,5 +1,4 @@
 import torch
-from inference_utils import load_model
 from langchain_core.runnables import chain
 from langchain_openai import ChatOpenAI
 
@@ -8,6 +7,9 @@ from utils.constants import CHOICE_TOKENS
 
 
 def create_local_forward(config):
+    # Lazy import: use_remote=False일 때만 필요
+    from inference_utils import load_model
+
     model, tokenizer = load_model(config.checkpoint_path, config.max_seq_length)
     device = next(model.parameters()).device
 
