@@ -12,16 +12,15 @@ def create_local_forward(model, tokenizer):
     @torch.inference_mode()
     def forward(data: dict):
         messages = data["messages"]
-        outputs = model(
-            tokenizer.apply_chat_template(
-                messages, tokenize=True, add_generation_prompt=True, return_tensors="pt"
-            ).to(device)
-        )
+        input_ids = tokenizer.apply_chat_template(
+            messages, tokenize=True, add_generation_prompt=True, return_tensors="pt"
+        ).to(device)
+        outputs = model(input_ids)
         len_choices = data["len_choices"]
-        logits = outputs.logits[:, -1].flatten().cpu()
+        log_probs = torch.log_softmax(outputs.logits[:, -1].flatten(), dim=0)
         choice_ids = get_choice_token_ids(tokenizer, len_choices)
-        target_logits = logits[choice_ids]
-        return {"data": data, "outputs": target_logits}
+        target = log_probs[choice_ids].cpu()
+        return {"data": data, "score": target}
 
     return forward
 
