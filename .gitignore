@@ -16,6 +16,7 @@ notebooks/baseline_code.ipynb
 
 # uv
 .venv/
+uv.lock
 
 # 환경 변수
 .env
