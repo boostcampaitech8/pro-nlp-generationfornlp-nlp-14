@@ -46,6 +46,9 @@ inference:
   FLM:
     max_seq_length: 4096
 
+  # 원격 서버 사용 여부
+  use_remote: True
+
   # 출력 설정
   output:
     path: "outputs/output.csv"

@@ -1,3 +1,3 @@
-from .mcq_chain import create_local_mcq_chain
+from .mcq_chain import create_mcq_chain
 
-__all__ = ["create_local_mcq_chain"]
+__all__ = ["create_mcq_chain"]

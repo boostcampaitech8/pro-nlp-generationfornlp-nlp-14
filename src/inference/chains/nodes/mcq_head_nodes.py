@@ -1,11 +1,14 @@
 import torch
+from inference_utils import load_model
 from langchain_core.runnables import chain
 from langchain_openai import ChatOpenAI
 
 from utils import get_choice_token_ids, logits_to_prediction
+from utils.constants import CHOICE_TOKENS
 
 
-def create_local_forward(model, tokenizer):
+def create_local_forward(config):
+    model, tokenizer = load_model(config.checkpoint_path, config.max_seq_length)
     device = next(model.parameters()).device
 
     @chain
@@ -19,7 +22,7 @@ def create_local_forward(model, tokenizer):
         len_choices = data["len_choices"]
         log_probs = torch.log_softmax(outputs.logits[:, -1].flatten(), dim=0)
         choice_ids = get_choice_token_ids(tokenizer, len_choices)
-        target = log_probs[choice_ids].cpu()
+        target = log_probs[choice_ids].cpu()  # LogS(V)filter choice_ids
         return {"data": data, "score": target}
 
     return forward
@@ -32,40 +35,30 @@ def create_llamacpp_forward():
 
     dotenv.load_dotenv()
     LLAMA_CPP_SERVER_URL = os.getenv("LLAMA_CPP_SERVER_URL")
-    NEG_INF = -1e30
 
     model = ChatOpenAI(
         base_url=LLAMA_CPP_SERVER_URL,
         api_key="NOT_NEED",
         model_name="NOTE_NEED",
         temperature=0,
-        logprobs=True,
         extra_body={
             "max_tokens": 1,
+            "grammar": 'root ::= ("1" | "2" | "3" | "4" | "5")',
+            "n_probs": 50,
+            "min_keep": 5,
         },
     )
 
-    def _build_choice_logprobs(top_pairs, len_choices):
-        choice_logprobs = torch.tensor([NEG_INF] * len_choices, dtype=torch.float)
-
-        for tok, lp in top_pairs:
-            s = tok.strip()
-            if s.isdigit():
-                k = int(s)
-                if 1 <= k <= len_choices:
-                    choice_logprobs[k - 1] = lp
-
-        return choice_logprobs
-
     @chain
     def foward(data):
-        _chain = model
-        output = _chain.invoke(data["messages"])
+        output = model.invoke(data["messages"])
+        len_choices = data["len_choices"]
         top = output.response_metadata["logprobs"]["content"][0]["top_logprobs"]
-        top_pairs = [(token["token"], token["logprob"]) for token in top]
-        choice_logprobs = _build_choice_logprobs(top_pairs, data["len_choices"])
+        top_dict = {tok["token"]: tok["logprob"] for tok in top if tok["token"] in CHOICE_TOKENS}
+        target = [top_dict.get(str(i), -torch.inf) for i in range(1, len_choices + 1)]
+        target_tensor = torch.tensor(target, dtype=torch.float)
 
-        return {"data": data, "score": choice_logprobs}
+        return {"data": data, "score": target_tensor}
 
     return foward
 
