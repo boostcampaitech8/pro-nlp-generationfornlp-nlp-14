@@ -4,6 +4,7 @@ from .v2 import V2Prompt
 from .v3 import V3Prompt
 from .v4 import V4Prompt
 from .v5 import V5Prompt
+from .v6 import V6Prompt
 
 PROMPT_REGISTRY = {
     "v1": V1Prompt(),
@@ -11,6 +12,7 @@ PROMPT_REGISTRY = {
     "v3": V3Prompt(),
     "v4": V4Prompt(),
     "v5": V5Prompt(),
+    "v6": V6Prompt(),
 }
 
 
