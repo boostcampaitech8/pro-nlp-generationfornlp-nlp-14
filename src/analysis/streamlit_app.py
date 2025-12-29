@@ -47,7 +47,11 @@ def preprocess_data(train_df: pd.DataFrame, output_df: pd.DataFrame) -> pd.DataF
         def check_correct(row):
             try:
                 # 모델 예측값은 answer_pred 컬럼에 있음
-                pred_answer = row.get("answer_pred") if "answer_pred" in row else row.get("answer")
+                pred_answer = (
+                    row.get("answer_pred")
+                    if "answer_pred" in row
+                    else row.get("answer")
+                )
                 return int(row["correct_answer"]) == int(pred_answer)
             except (ValueError, TypeError):
                 return False
@@ -88,8 +92,10 @@ def main():
             index=0,
         )
     else:
-        st.sidebar.warning("data/ 디렉토리에 CSV 파일이 없습니다.")
-        data_path = st.sidebar.text_input("데이터 경로 (CSV)", "data/train.csv")
+        st.sidebar.warning("data/fold/ 디렉토리에 CSV 파일이 없습니다.")
+        data_path = st.sidebar.text_input(
+            "데이터 경로 (CSV)", "data/fold/train_with_folds.csv"
+        )
 
     # outputs/ 디렉토리의 CSV 파일 목록 가져오기
     output_files = get_csv_files("outputs")
@@ -101,7 +107,9 @@ def main():
         )
     else:
         st.sidebar.warning("outputs/ 디렉토리에 CSV 파일이 없습니다.")
-        output_path = st.sidebar.text_input("모델 1 출력 경로 (CSV)", "outputs/output.csv")
+        output_path = st.sidebar.text_input(
+            "모델 1 출력 경로 (CSV)", "outputs/output.csv"
+        )
 
     # Multi-model comparison
     with st.sidebar.expander("🔄 모델 비교 (선택사항)"):
@@ -111,11 +119,15 @@ def main():
                 output_path_2 = st.selectbox(
                     "모델 2 출력 경로 (CSV)",
                     options=output_files,
-                    index=min(1, len(output_files) - 1),  # 두 번째 파일 또는 첫 번째 파일
+                    index=min(
+                        1, len(output_files) - 1
+                    ),  # 두 번째 파일 또는 첫 번째 파일
                     key="output_path_2",
                 )
             else:
-                output_path_2 = st.text_input("모델 2 출력 경로 (CSV)", "outputs/model2.csv")
+                output_path_2 = st.text_input(
+                    "모델 2 출력 경로 (CSV)", "outputs/model2.csv"
+                )
         else:
             output_path_2 = None
 
@@ -157,10 +169,14 @@ def main():
     if enable_comparison and output_path_2:
         try:
             output_df_2 = pd.read_csv(output_path_2)
-            merged_df_2 = pd.merge(train_df, output_df_2, on="id", suffixes=("", "_pred2"))
+            merged_df_2 = pd.merge(
+                train_df, output_df_2, on="id", suffixes=("", "_pred2")
+            )
             if "problems" in merged_df_2.columns:
                 parsed_problems_2 = merged_df_2["problems"].apply(parse_problem)
-                merged_df_2["correct_answer"] = parsed_problems_2.apply(lambda x: x.get("answer"))
+                merged_df_2["correct_answer"] = parsed_problems_2.apply(
+                    lambda x: x.get("answer")
+                )
                 merged_df_2["is_correct_2"] = merged_df_2.apply(
                     lambda row: int(row["correct_answer"]) == int(row["answer"])
                     if pd.notna(row["correct_answer"]) and pd.notna(row["answer"])
@@ -189,15 +205,34 @@ def main():
         "input_length",
     ]
     potential_cats = [
-        col for col in merged_df.columns if col not in ignore_cols and merged_df[col].nunique() < 50
+        col
+        for col in merged_df.columns
+        if col not in ignore_cols and merged_df[col].nunique() < 50
     ]
 
     active_filters = {}
     if potential_cats:
         for col in potential_cats:
-            options = merged_df[col].unique().tolist()
-            selected = st.sidebar.multiselect(f"{col} 필터", options, default=options)
-            active_filters[col] = selected
+            options = sorted(merged_df[col].unique().tolist())
+
+            with st.sidebar.expander(f"📁 {col}", expanded=False):
+                # 세션 상태 초기화
+                if f"filter_{col}" not in st.session_state:
+                    st.session_state[f"filter_{col}"] = {opt: True for opt in options}
+
+                # 체크박스 생성
+                selected = []
+                for opt in options:
+                    is_checked = st.checkbox(
+                        str(opt),
+                        value=st.session_state[f"filter_{col}"].get(opt, True),
+                        key=f"cb_{col}_{opt}",
+                    )
+                    st.session_state[f"filter_{col}"][opt] = is_checked
+                    if is_checked:
+                        selected.append(opt)
+
+                active_filters[col] = selected
 
     # 필터 적용
     filtered_df = merged_df.copy()
@@ -210,7 +245,9 @@ def main():
             ["📊 종합 분석", "❌ 모델 오답 분석", "🔄 모델 비교"]
         )
     else:
-        tab_comprehensive, tab_error_analysis = st.tabs(["📊 종합 분석", "❌ 모델 오답 분석"])
+        tab_comprehensive, tab_error_analysis = st.tabs(
+            ["📊 종합 분석", "❌ 모델 오답 분석"]
+        )
 
     # ==========================================
     # 탭 1: 종합 분석
@@ -228,7 +265,9 @@ def main():
             if "correct_answer" not in df.columns or "answer" not in df.columns:
                 return 0.0, {}
 
-            classes = sorted(set(df["correct_answer"].unique()) | set(df["answer"].unique()))
+            classes = sorted(
+                set(df["correct_answer"].unique()) | set(df["answer"].unique())
+            )
             class_metrics = {}
 
             for cls in classes:
@@ -239,7 +278,9 @@ def main():
                 precision = tp / (tp + fp) if (tp + fp) > 0 else 0
                 recall = tp / (tp + fn) if (tp + fn) > 0 else 0
                 f1 = (
-                    2 * precision * recall / (precision + recall) if (precision + recall) > 0 else 0
+                    2 * precision * recall / (precision + recall)
+                    if (precision + recall) > 0
+                    else 0
                 )
 
                 class_metrics[cls] = {
@@ -249,7 +290,11 @@ def main():
                     "support": tp + fn,
                 }
 
-            macro_f1 = sum(m["f1"] for m in class_metrics.values()) / len(classes) if classes else 0
+            macro_f1 = (
+                sum(m["f1"] for m in class_metrics.values()) / len(classes)
+                if classes
+                else 0
+            )
             return macro_f1, class_metrics
 
         macro_f1, class_metrics = calculate_macro_f1(filtered_df)
@@ -316,7 +361,8 @@ def main():
                 {
                     "번호": list(all_answers) * 2,
                     "개수": list(pred_counts.values) + list(true_counts.values),
-                    "유형": ["모델 예측"] * len(all_answers) + ["실제 정답"] * len(all_answers),
+                    "유형": ["모델 예측"] * len(all_answers)
+                    + ["실제 정답"] * len(all_answers),
                 }
             )
 
@@ -329,7 +375,8 @@ def main():
                     color=alt.Color(
                         "유형:N",
                         scale=alt.Scale(
-                            domain=["모델 예측", "실제 정답"], range=["#f97316", "#3b82f6"]
+                            domain=["모델 예측", "실제 정답"],
+                            range=["#f97316", "#3b82f6"],
                         ),
                     ),
                     xOffset="유형:N",
@@ -367,7 +414,9 @@ def main():
 
         if "correct_answer" in filtered_df.columns and "answer" in filtered_df.columns:
             confusion_data = (
-                filtered_df.groupby(["correct_answer", "answer"]).size().reset_index(name="count")
+                filtered_df.groupby(["correct_answer", "answer"])
+                .size()
+                .reset_index(name="count")
             )
 
             heatmap = (
@@ -375,8 +424,12 @@ def main():
                 .mark_rect()
                 .encode(
                     x=alt.X("answer:O", title="예측 (Predicted)"),
-                    y=alt.Y("correct_answer:O", title="정답 (Actual)", sort="ascending"),
-                    color=alt.Color("count:Q", scale=alt.Scale(scheme="oranges"), title="문항 수"),
+                    y=alt.Y(
+                        "correct_answer:O", title="정답 (Actual)", sort="ascending"
+                    ),
+                    color=alt.Color(
+                        "count:Q", scale=alt.Scale(scheme="oranges"), title="문항 수"
+                    ),
                     tooltip=[
                         alt.Tooltip("correct_answer:O", title="정답"),
                         alt.Tooltip("answer:O", title="예측"),
@@ -492,7 +545,9 @@ def main():
             bin_table["정답률(%)"] = (bin_table["정답률"] * 100).round(2)
             bin_table["평균길이"] = bin_table["평균길이"].round(0).astype(int)
 
-            bin_table = bin_table[["길이 구간", "문항수", "평균길이", "정답수", "정답률(%)"]]
+            bin_table = bin_table[
+                ["길이 구간", "문항수", "평균길이", "정답수", "정답률(%)"]
+            ]
 
             # 정렬 옵션
             sort_by = st.radio(
@@ -526,13 +581,51 @@ def main():
 
                 with row_c1:
                     st.markdown(f"**'{selected_cat}' 분포 (문항 수)**")
-                    dist_counts = filtered_df[selected_cat].value_counts()
-                    st.bar_chart(dist_counts)
+                    dist_counts = filtered_df[selected_cat].value_counts().reset_index()
+                    dist_counts.columns = [selected_cat, "문항 수"]
+
+                    dist_chart = (
+                        alt.Chart(dist_counts)
+                        .mark_bar(color="#3b82f6")
+                        .encode(
+                            x=alt.X(
+                                f"{selected_cat}:N",
+                                title=None,
+                                axis=alt.Axis(labelAngle=0),
+                            ),
+                            y=alt.Y("문항 수:Q", title="문항 수"),
+                            tooltip=[selected_cat, "문항 수"],
+                        )
+                        .properties(height=300)
+                    )
+                    st.altair_chart(dist_chart, use_container_width=True)
 
                 with row_c2:
                     st.markdown(f"**'{selected_cat}'별 정답률 (%)**")
-                    cat_acc = filtered_df.groupby(selected_cat)["is_correct"].mean() * 100
-                    st.bar_chart(cat_acc)
+                    cat_acc = (
+                        filtered_df.groupby(selected_cat)["is_correct"].mean() * 100
+                    )
+                    cat_acc_df = cat_acc.reset_index()
+                    cat_acc_df.columns = [selected_cat, "정답률 (%)"]
+
+                    acc_chart = (
+                        alt.Chart(cat_acc_df)
+                        .mark_bar(color="#f97316")
+                        .encode(
+                            x=alt.X(
+                                f"{selected_cat}:N",
+                                title=None,
+                                axis=alt.Axis(labelAngle=0),
+                            ),
+                            y=alt.Y("정답률 (%):Q", title="정답률 (%)"),
+                            tooltip=[
+                                selected_cat,
+                                alt.Tooltip("정답률 (%):Q", format=".1f"),
+                            ],
+                        )
+                        .properties(height=300)
+                    )
+                    st.altair_chart(acc_chart, use_container_width=True)
         else:
             st.info(
                 "분석할 추가적인 데이터 라벨(카테고리)이 발견되지 않았습니다. (고유값 50개 미만인 컬럼 없음)"
@@ -547,7 +640,9 @@ def main():
         # 오답만 필터링
         error_df = filtered_df[~filtered_df["is_correct"]]
 
-        st.markdown(f"**현재 필터 기준 오답 문항 수**: {len(error_df)} / {len(filtered_df)}")
+        st.markdown(
+            f"**현재 필터 기준 오답 문항 수**: {len(error_df)} / {len(filtered_df)}"
+        )
 
         # ------------------------------------------
         # CSV Export
@@ -574,9 +669,13 @@ def main():
         # ------------------------------------------
         st.subheader("📄 오답 목록")
 
-        items_per_page = st.slider("페이지당 문항 수", min_value=5, max_value=50, value=10)
+        items_per_page = st.slider(
+            "페이지당 문항 수", min_value=5, max_value=50, value=10
+        )
         total_pages = max(1, (len(error_df) - 1) // items_per_page + 1)
-        page_num = st.number_input("페이지", min_value=1, max_value=total_pages, value=1)
+        page_num = st.number_input(
+            "페이지", min_value=1, max_value=total_pages, value=1
+        )
 
         start_idx = (page_num - 1) * items_per_page
         end_idx = start_idx + items_per_page
@@ -646,10 +745,15 @@ def main():
         with tab_comparison:
             st.header("🔄 모델 비교 분석")
 
-            # Merge model 1 and model 2 results
-            model1_correct = set(merged_df[merged_df["is_correct"]]["id"].tolist())
-            model2_correct = set(merged_df_2[merged_df_2["is_correct_2"]]["id"].tolist())
-            all_ids = set(merged_df["id"].tolist())
+            # 필터링된 데이터 기준으로 비교
+            filtered_ids = set(filtered_df["id"].tolist())
+            filtered_df_2_comp = merged_df_2[merged_df_2["id"].isin(filtered_ids)]
+
+            model1_correct = set(filtered_df[filtered_df["is_correct"]]["id"].tolist())
+            model2_correct = set(
+                filtered_df_2_comp[filtered_df_2_comp["is_correct_2"]]["id"].tolist()
+            )
+            all_ids = filtered_ids
 
             # Calculate sets
             both_correct = model1_correct & model2_correct
@@ -669,8 +773,12 @@ def main():
 
             # Accuracy comparison
             st.subheader("📈 정확도 비교")
-            acc_model1 = len(model1_correct) / len(all_ids) * 100 if len(all_ids) > 0 else 0
-            acc_model2 = len(model2_correct) / len(all_ids) * 100 if len(all_ids) > 0 else 0
+            acc_model1 = (
+                len(model1_correct) / len(all_ids) * 100 if len(all_ids) > 0 else 0
+            )
+            acc_model2 = (
+                len(model2_correct) / len(all_ids) * 100 if len(all_ids) > 0 else 0
+            )
 
             acc_comparison = pd.DataFrame(
                 {
@@ -683,11 +791,241 @@ def main():
 
             st.divider()
 
-            # List questions where models differ
+            # ------------------------------------------
+            # 입력 길이별 모델 정답률 비교
+            # ------------------------------------------
+            st.subheader("📏 입력 길이별 모델 정답률 비교")
+            st.caption("입력 길이 구간별로 두 모델의 정답률을 비교합니다.")
+
+            if "input_length" in filtered_df.columns and not filtered_df.empty:
+                bin_step = 100
+
+                # 모델 2에 input_length 추가
+                filtered_df_2 = merged_df_2[
+                    merged_df_2["id"].isin(filtered_df["id"])
+                ].copy()
+                filtered_df_2["input_length"] = (
+                    filtered_df.set_index("id")["input_length"]
+                    .reindex(filtered_df_2["id"])
+                    .values
+                )
+
+                # 구간 경계 생성
+                min_len = int(filtered_df["input_length"].min() // bin_step * bin_step)
+                max_len = int(
+                    (filtered_df["input_length"].max() // bin_step + 1) * bin_step
+                )
+                bins = list(range(min_len, max_len + bin_step, bin_step))
+
+                # 모델 1 구간별 정답률
+                tmp1 = filtered_df[["input_length", "is_correct"]].copy()
+                tmp1["length_bin"] = pd.cut(
+                    tmp1["input_length"], bins=bins, right=False
+                )
+                bin_acc_model1 = (
+                    tmp1.groupby("length_bin", observed=True)["is_correct"].mean() * 100
+                )
+                bin_count = tmp1.groupby("length_bin", observed=True).size()
+
+                # 모델 2 구간별 정답률
+                tmp2 = filtered_df_2[["input_length", "is_correct_2"]].copy()
+                tmp2["length_bin"] = pd.cut(
+                    tmp2["input_length"], bins=bins, right=False
+                )
+                bin_acc_model2 = (
+                    tmp2.groupby("length_bin", observed=True)["is_correct_2"].mean()
+                    * 100
+                )
+
+                # Line Chart with Points
+                all_bins = sorted(set(bin_acc_model1.index) | set(bin_acc_model2.index))
+                bin_labels = [f"{int(b.left)}~{int(b.right)}" for b in all_bins]
+                # x축에 구간 중간값 사용 (정렬용)
+                bin_mid = [(b.left + b.right) / 2 for b in all_bins]
+
+                length_chart_data = pd.DataFrame(
+                    {
+                        "길이 구간": bin_labels * 2,
+                        "구간 중간값": bin_mid * 2,
+                        "정답률 (%)": list(
+                            bin_acc_model1.reindex(all_bins, fill_value=0)
+                        )
+                        + list(bin_acc_model2.reindex(all_bins, fill_value=0)),
+                        "모델": ["모델 1"] * len(all_bins) + ["모델 2"] * len(all_bins),
+                    }
+                )
+
+                # Line + Point chart
+                base = alt.Chart(length_chart_data).encode(
+                    x=alt.X(
+                        "구간 중간값:Q",
+                        title="입력 길이",
+                        scale=alt.Scale(domain=[min(bin_mid) - 50, max(bin_mid) + 50]),
+                    ),
+                    y=alt.Y(
+                        "정답률 (%):Q",
+                        title="정답률 (%)",
+                        scale=alt.Scale(domain=[0, 100]),
+                    ),
+                    color=alt.Color(
+                        "모델:N",
+                        scale=alt.Scale(
+                            domain=["모델 1", "모델 2"], range=["#f97316", "#9ca3af"]
+                        ),
+                        legend=alt.Legend(title="모델"),
+                    ),
+                    tooltip=[
+                        "길이 구간",
+                        "모델",
+                        alt.Tooltip("정답률 (%):Q", format=".1f"),
+                    ],
+                )
+
+                line = base.mark_line(strokeWidth=3)
+                points = base.mark_point(size=100, filled=True)
+
+                length_line_chart = (line + points).properties(
+                    title="입력 길이 구간별 모델 정답률 비교",
+                    height=350,
+                )
+
+                st.altair_chart(length_line_chart, use_container_width=True)
+
+                # 비교 테이블
+                st.markdown("**📋 입력 길이별 정답률 비교 테이블**")
+                length_comparison_table = pd.DataFrame(
+                    {
+                        "길이 구간": bin_labels,
+                        "문항 수": [bin_count.get(b, 0) for b in all_bins],
+                        "모델 1 정답률": [
+                            f"{bin_acc_model1.get(b, 0):.1f}%" for b in all_bins
+                        ],
+                        "모델 2 정답률": [
+                            f"{bin_acc_model2.get(b, 0):.1f}%" for b in all_bins
+                        ],
+                        "차이 (Δ)": [
+                            f"{bin_acc_model1.get(b, 0) - bin_acc_model2.get(b, 0):+.1f}%"
+                            for b in all_bins
+                        ],
+                    }
+                )
+                st.dataframe(
+                    length_comparison_table, hide_index=True, use_container_width=True
+                )
+            else:
+                st.info("입력 길이 분석을 위한 데이터가 없습니다.")
+
+            st.divider()
+
+            # ------------------------------------------
+            # 라벨별 모델 성능 비교
+            # ------------------------------------------
+            st.subheader("🏷️ 라벨별 모델 성능 비교")
+            st.caption("각 라벨(카테고리)에서 두 모델의 정답률을 비교합니다.")
+
+            if potential_cats:
+                selected_cat_comp = st.selectbox(
+                    "분석할 라벨(Feature) 선택",
+                    potential_cats,
+                    key="comparison_cat_select",
+                )
+
+                if selected_cat_comp:
+                    # 모델 1, 모델 2 정답률 계산
+                    cat_acc_model1 = (
+                        filtered_df.groupby(selected_cat_comp)["is_correct"].mean()
+                        * 100
+                    )
+                    cat_count = filtered_df.groupby(selected_cat_comp).size()
+
+                    # 모델 2 정답률 계산
+                    filtered_df_2 = merged_df_2[
+                        merged_df_2["id"].isin(filtered_df["id"])
+                    ]
+                    cat_acc_model2 = (
+                        filtered_df_2.groupby(selected_cat_comp)["is_correct_2"].mean()
+                        * 100
+                    )
+
+                    # Grouped Bar Chart (Altair)
+                    all_labels = sorted(
+                        set(cat_acc_model1.index) | set(cat_acc_model2.index)
+                    )
+                    chart_data = pd.DataFrame(
+                        {
+                            "라벨": list(all_labels) * 2,
+                            "정답률 (%)": list(
+                                cat_acc_model1.reindex(all_labels, fill_value=0)
+                            )
+                            + list(cat_acc_model2.reindex(all_labels, fill_value=0)),
+                            "모델": ["모델 1"] * len(all_labels)
+                            + ["모델 2"] * len(all_labels),
+                        }
+                    )
+
+                    grouped_chart = (
+                        alt.Chart(chart_data)
+                        .mark_bar()
+                        .encode(
+                            x=alt.X("라벨:N", title=selected_cat_comp, sort=all_labels),
+                            y=alt.Y("정답률 (%):Q", title="정답률 (%)"),
+                            color=alt.Color(
+                                "모델:N",
+                                scale=alt.Scale(
+                                    domain=["모델 1", "모델 2"],
+                                    range=["#f97316", "#9ca3af"],
+                                ),
+                            ),
+                            xOffset="모델:N",
+                            tooltip=[
+                                "라벨",
+                                "모델",
+                                alt.Tooltip("정답률 (%):Q", format=".1f"),
+                            ],
+                        )
+                        .properties(title=f"'{selected_cat_comp}'별 모델 정답률 비교")
+                    )
+
+                    st.altair_chart(grouped_chart, use_container_width=True)
+
+                    # 비교 테이블
+                    st.markdown("**📋 라벨별 정답률 비교 테이블**")
+                    comparison_table = pd.DataFrame(
+                        {
+                            "라벨": all_labels,
+                            "문항 수": [cat_count.get(lbl, 0) for lbl in all_labels],
+                            "모델 1 정답률": [
+                                f"{cat_acc_model1.get(lbl, 0):.1f}%"
+                                for lbl in all_labels
+                            ],
+                            "모델 2 정답률": [
+                                f"{cat_acc_model2.get(lbl, 0):.1f}%"
+                                for lbl in all_labels
+                            ],
+                            "차이 (Δ)": [
+                                f"{cat_acc_model1.get(lbl, 0) - cat_acc_model2.get(lbl, 0):+.1f}%"
+                                for lbl in all_labels
+                            ],
+                        }
+                    )
+                    st.dataframe(
+                        comparison_table, hide_index=True, use_container_width=True
+                    )
+            else:
+                st.info(
+                    "분석할 추가적인 데이터 라벨(카테고리)이 발견되지 않았습니다. (고유값 50개 미만인 컬럼 없음)"
+                )
+
+            st.divider()
+
+            # ------------------------------------------
+            # 모델 간 차이 분석
+            # ------------------------------------------
             st.subheader("🔍 모델 간 차이 분석")
 
             diff_type = st.selectbox(
-                "보기 옵션", ["모델 1만 정답인 문제", "모델 2만 정답인 문제", "둘 다 오답인 문제"]
+                "보기 옵션",
+                ["모델 1만 정답인 문제", "모델 2만 정답인 문제", "둘 다 오답인 문제"],
             )
 
             if diff_type == "모델 1만 정답인 문제":
