@@ -38,12 +38,21 @@ help:
 	@echo "  make clean-cache - 툴 캐시 삭제"
 	@echo "  make clean-all   - 모든 캐시 삭제"
 
-# 설치
+# 설치 (dev: lint 포함)
 install: system-deps
 	uv sync
 
-dev: system-deps
-	uv sync --all-extras
+# 설치 (train: lint 포함)
+install-train: system-deps
+	uv sync --group train
+
+# 설치 (notebook: lint 포함)
+install-notebook: system-deps
+	uv sync --group notebook
+	
+# 설치 (prod: lint 제외)
+install-prod: system-deps
+	uv sync --no-default-groups
 
 # 코드 품질
 lint:

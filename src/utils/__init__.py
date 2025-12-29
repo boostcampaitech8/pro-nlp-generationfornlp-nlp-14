@@ -28,9 +28,6 @@ from utils.prediction import (
 # 프롬프트 템플릿
 from utils.prompts import CHAT_TEMPLATE
 
-# wandb 설정 함수
-from utils.wandb_setup import setup_wandb
-
 __all__ = [
     # 상수
     "INT_TO_STR_MAP",
@@ -46,6 +43,17 @@ __all__ = [
     "decode_labels",
     # 템플릿
     "CHAT_TEMPLATE",
-    # wandb 설정 함수
+    # wandb 설정 함수 (lazy import)
     "setup_wandb",
 ]
+
+
+def __getattr__(name):
+    """
+    setup_wandb는 학습 시에만 필요하므로 실제 사용 시점에 Lazy import.
+    """
+    if name == "setup_wandb":
+        from utils.wandb_setup import setup_wandb
+
+        return setup_wandb
+    raise AttributeError(f"module 'utils' has no attribute '{name}'")

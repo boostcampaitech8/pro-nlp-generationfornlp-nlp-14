@@ -53,7 +53,7 @@ def preprocess_data(train_df: pd.DataFrame, output_df: pd.DataFrame) -> pd.DataF
                 return False
 
         merged_df["is_correct"] = merged_df.apply(check_correct, axis=1)
-        
+
         # 예측값을 answer 컬럼으로 통일 (나머지 코드 호환성 유지)
         if "answer_pred" in merged_df.columns:
             merged_df["answer"] = merged_df["answer_pred"]
@@ -80,7 +80,7 @@ def main():
     st.sidebar.header("⚙️ 설정 (Configuration)")
 
     # data/ 디렉토리의 CSV 파일 목록 가져오기
-    data_files = get_csv_files("data")
+    data_files = get_csv_files("data/fold")
     if data_files:
         data_path = st.sidebar.selectbox(
             "데이터 경로 (CSV)",

@@ -173,6 +173,9 @@ class InferenceConfig(BaseConfig):
     # FLM ONLY 토큰 길이 설정
     max_seq_length: int
 
+    # mcq chain 모델 설정
+    use_remote: bool
+
     # 출력 설정
     output_path: str
 
@@ -182,6 +185,7 @@ class InferenceConfig(BaseConfig):
         "data_prompt_style": "prompt_style",
         "output_path": "output_path",
         "FLM_max_seq_length": "max_seq_length",
+        "use_remote": "use_remote",
     }
 
 
