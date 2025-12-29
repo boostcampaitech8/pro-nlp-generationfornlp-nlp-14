@@ -9,6 +9,7 @@ train:
   # 데이터 설정
   data:
     train_path: "data/train.csv"
+    prompt_style: "v1"
     eval_ratio: 0.1
 
   # 학습 하이퍼파라미터
@@ -41,6 +42,7 @@ inference:
   # 데이터 설정
   data:
     test_path: "data/test.csv"
+    prompt_style: "v1"
 
   # Only use FastLanguage Model
   FLM:
