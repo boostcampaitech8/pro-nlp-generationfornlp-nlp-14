@@ -7,6 +7,7 @@
     - HybridSearcher: ES 하이브리드 검색 구현체
     - PDRRetriever: 2단계 하이브리드 검색 전략 (Parent → Chunk)
     - WriteThroughStore: DB 쓰기 시 로컬 백업 동시 저장
+    - VectorStoreBackup: 전체 스냅샷 백업/복구
 
 Usage:
     >>> from src.vectorstore import ESConfig, create_es_client
@@ -35,6 +36,7 @@ Usage:
     $ python -m migrations.migrate status   # 상태 확인
 """
 
+from .backup import LocalBackupManager, VectorStoreBackup, WriteThroughStore
 from .client import check_connection, create_es_client
 from .config import ESConfig
 from .documents import ChunkDoc, ParentDoc
@@ -61,4 +63,8 @@ __all__ = [
     "HybridSearcher",
     "PDRConfig",
     "PDRRetriever",
+    # Backup
+    "LocalBackupManager",
+    "WriteThroughStore",
+    "VectorStoreBackup",
 ]
