@@ -1,13 +1,11 @@
 from typing import TypedDict
 
-import torch
-
 from .request import McqRequest
 
 
 class ForwardContext(TypedDict):
     data: McqRequest
-    score: torch.Tensor  # shape: (len_choices,)
+    score: list[float]  # shape: (len_choices,)
 
 
 class DecodedContext(ForwardContext):
