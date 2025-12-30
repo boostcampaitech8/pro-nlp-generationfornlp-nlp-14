@@ -21,19 +21,6 @@ Usage:
     >>> parent_repo = ParentRepository(es, cfg)
     >>> chunk_repo = ChunkRepository(es, cfg)
     >>> parent_repo.upsert(parent_doc)
-    >>>
-    >>> # 검색 (PDR 전략)
-    >>> searcher = HybridSearcher(es, cfg)
-    >>> pdr = PDRRetriever(searcher, parent_repo, PDRConfig(
-    ...     parents_index=cfg.parents_index,
-    ...     chunks_index=cfg.chunks_index,
-    ... ))
-    >>> parents = pdr.search_parents(query="수학 함수", query_vector=emb)
-    >>> chunks = pdr.search_chunks(query="미분", query_vector=emb, doc_ids=[...])
-
-마이그레이션 (인덱스 DDL):
-    $ python -m migrations.migrate create   # 인덱스 생성
-    $ python -m migrations.migrate status   # 상태 확인
 """
 
 from .backup import LocalBackupManager, VectorStoreBackup, WriteThroughStore
@@ -41,7 +28,7 @@ from .client import check_connection, create_es_client
 from .config import ESConfig
 from .documents import ChunkDoc, ParentDoc
 from .repository import BaseRepository, ChunkRepository, ParentRepository
-from .search import HybridSearcher, PDRConfig, PDRRetriever, SearchHit, SearchParams
+from .search import HybridSearcher, SearchHit, SearchParams
 
 __all__ = [
     # Config
@@ -61,8 +48,6 @@ __all__ = [
     "ChunkRepository",
     # Search
     "HybridSearcher",
-    "PDRConfig",
-    "PDRRetriever",
     # Backup
     "LocalBackupManager",
     "WriteThroughStore",
