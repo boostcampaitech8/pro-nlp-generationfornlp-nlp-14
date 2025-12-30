@@ -1,35 +1,128 @@
-import sys  # noqa: I001
+import os
+import sys
 
 import pandas as pd
-
+from dotenv import load_dotenv
+from langchain_core.runnables import (
+    RunnableBranch,
+    RunnableLambda,
+    RunnableParallel,
+    RunnablePassthrough,
+)
+from langchain_openai import ChatOpenAI
 from tqdm import tqdm
 
-from data.data_processing import create_test_prompt_messages, load_and_parse_data
+from chains.builder import build_mcq_chain, build_retriever
+from chains.builder.mcq_request import build_mcq_request
+from chains.planning.coercion import _coerce_plan
+from chains.planning.mapper import _to_prompt_input
+from chains.retrieval.nodes.build_context import build_context
+from chains.retrieval.nodes.doc_to_response import (
+    documents_to_retrieval_responses,
+)
+from data.data_processing import load_and_parse_data
 from prompts import get_prompt_manager
+from prompts.plan.plan import plan_prompt
+from schemas.mcq.rows import PredRow, ScoreRow
+from schemas.processed_question import ProcessedQuestion
+from schemas.retrieval import RetrievalPlan
+from schemas.retrieval.plan import RetrievalRequest
+from schemas.retrieval.response import RetrievalResponse
 from utils import InferenceConfig
-from chains.mcq_chain import create_mcq_chain
+
+MAX_PARA_CHARS = 10_000
+MAX_CTX_CHARS = 4_000
 
 
 def main(config: InferenceConfig):
     """추론 메인 함수
-
     Args:
         config: 추론 설정 객체
     """
-
     # 테스트 데이터 로드 및 전처리
     test_df = load_and_parse_data(config.test_data)
     prompt_manager = get_prompt_manager(config.prompt_style)
-    test_dataset = create_test_prompt_messages(test_df, prompt_manager)
 
-    # 추론 실행
-    infer_results = []
+    retriever = build_retriever()
 
-    # create chain
-    qa_chain = create_mcq_chain(config)
+    # -------------------------
+    # 1) planner LLM
+    # -------------------------
+    planner_llm = ChatOpenAI(
+        base_url=os.environ["LLAMA_CPP_SERVER_URL"],
+        api_key="API_KEY_NOT_NEED",  # type: ignore
+        model="LLama_cpp_model",
+        temperature=1.0,
+    )
 
-    for data in tqdm(test_dataset, desc="Inference"):
-        outs = qa_chain.invoke(data)
+    planner = (
+        RunnableLambda(_to_prompt_input)
+        | plan_prompt
+        | planner_llm.with_structured_output(RetrievalPlan)
+        | RunnableLambda(_coerce_plan)
+    )
+
+    def retrieval(state: dict) -> dict:
+        plan: RetrievalPlan = state["plan"]
+        data: ProcessedQuestion = state["data"]
+        responses: list[RetrievalResponse] = []
+
+        for req in plan.requests:
+            req = req if isinstance(req, RetrievalRequest) else RetrievalRequest(**req)
+            docs = retriever.invoke(req.query, top_k=req.top_k)
+            responses.extend(documents_to_retrieval_responses(req.query, docs))
+
+        context = build_context(responses, max_chars=MAX_CTX_CHARS)
+        return {
+            "data": data,
+            "plan": plan,
+            "external_knowledge": responses,
+            "context": context,
+        }
+
+    retrieval_step = RunnableLambda(retrieval)
+
+    # -------MCQ chain---------
+    qa_chain = build_mcq_chain(config)
+    mcp_prompt = RunnableLambda(
+        lambda s: build_mcq_request(prompt_manager, s["data"], context=s.get("context", ""))
+    )
+
+    # long path: planner + retrieval
+    # planner 출력 보정까지 붙일 거면:
+    # planner_step = planner_step | RunnableLambda(fix_plan)
+    long_path = (
+        RunnableParallel(
+            data=RunnablePassthrough(),  # data 그대로 유지
+            plan=planner,  # planner 실행
+        )
+        | retrieval_step
+        | mcp_prompt
+        | qa_chain
+    )
+    # short path: planner/retrieval 모두 스킵
+    short_path = mcp_prompt | qa_chain
+
+    MIN_PARA_CHARS_FOR_PLANNER = 600
+
+    whole_chain = RunnableBranch(
+        (
+            lambda data: len((data.paragraph or "").strip()) > MIN_PARA_CHARS_FOR_PLANNER,
+            short_path,
+        ),
+        long_path,  # default
+    )
+
+    infer_results: list[tuple[PredRow, ScoreRow]] = []
+    for _, row in tqdm(test_df.iterrows(), desc="Inference"):
+        data = ProcessedQuestion(
+            id=row["id"],
+            paragraph=row["paragraph"],
+            question=row["question"],
+            choices=row["choices"],
+            question_plus=row.get("question_plus"),
+        )
+        outs = whole_chain.invoke(data)
         infer_results.append(outs)
 
     preds, score = map(list, zip(*infer_results, strict=True))
@@ -51,7 +144,7 @@ if __name__ == "__main__":
         print("Usage: python inference.py <config_path>")
         print("Example: python inference.py configs/config.yaml")
         sys.exit(1)
-
+    load_dotenv()
     config_path = sys.argv[1]
     config = InferenceConfig.from_yaml(config_path)
     main(config)
