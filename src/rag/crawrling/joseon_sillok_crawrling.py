@@ -79,7 +79,7 @@ for i in range(2, total_main):
                     # --- [수집 구간] ---
                     # 예: 기사 제목과 본문 출력
                     try:
-                        print(f"{article_title}에 들어왔다!! 제발 들어가라 젭ㅈㅂ...")
+                        print(f"{article_title}에 들어왔다!!")
                         date = driver.find_element(By.CLASS_NAME, "date").text
                         parent_content_xpath = "/html/body/div[2]/div/div[1]/main/div[2]/div/div/div[2]/div[1]/div[3]/div[1]/div"
                         paragraph_content = driver.find_elements(
