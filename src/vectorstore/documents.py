@@ -20,7 +20,7 @@ class ParentDoc:
 
     # optional
     version: str = "v1"
-    created_at: str = utcnow_iso()
+    created_at: str | None = None
 
     def to_es(self) -> dict[str, Any]:
         d = asdict(self)
@@ -42,7 +42,7 @@ class ChunkDoc:
     start_char: int | None = None
     end_char: int | None = None
     version: str = "v1"
-    created_at: str = utcnow_iso()
+    created_at: str | None = None
 
     def to_es(self) -> dict[str, Any]:
         d = asdict(self)
