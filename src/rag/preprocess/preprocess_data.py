@@ -1,45 +1,38 @@
 import pandas as pd
 
-# 1. 엑셀 데이터 불러오기 및 가공 (변형 금지 조항을 고려하여 원문 위주 결합)
 try:
-    df_excel = pd.read_excel("./data/rag_db/rag_data_basic.xlsx", header=0)
+    df_csv_basic = pd.read_csv("./data/rag_db/rag_data_basic.csv", index_col=0)
 
-    # 결측치 처리
-    df_excel["설명"] = df_excel["설명"].fillna("")
-    df_excel["내용"] = df_excel["내용"].fillna("")
-
-    # 원문을 훼손하지 않는 범위 내에서 검색용 컬럼 생성
-    df_excel["content"] = df_excel["설명"] + " " + df_excel["내용"]
-    df_excel["topic"] = df_excel["한글명칭"].fillna("") + " " + df_excel["제목"].fillna("")
-
-    # 필요한 컬럼만 추출
-    df_excel_tmp = df_excel[["topic", "content"]]
+    df_csv_basic_tmp = df_csv_basic[["topic", "content"]]
+    print(f"기본 CSV 로드 완료: {len(df_csv_basic_tmp)}행")
 except Exception as e:
-    print(f"엑셀 파일 로드 실패: {e}")
-    df_excel_tmp = pd.DataFrame(columns=["topic", "content"])
+    print(f"기본 CSV 로드 실패: {e}")
+    df_csv_basic_tmp = pd.DataFrame(columns=["topic", "content"])
 
-# 2. JSON 데이터 불러오기
+# 2. JSON 데이터 불러오기 (history_data_final.json)
 try:
+    # JSON 파일을 데이터프레임으로 변환
     df_json = pd.read_json("./data/rag_db/history_data_final.json", encoding="utf-8")
 
-    # JSON의 컬럼명(title -> topic, context -> content) 통일
+    # 컬럼명 통일 (title -> topic, context -> content)
     df_json = df_json.rename(columns={"title": "topic", "context": "content"})
 
-    # 기존 index 열 제외
+    # 필요한 컬럼만 추출
     df_json_tmp = df_json[["topic", "content"]]
+    print(f"JSON 데이터 로드 완료: {len(df_json_tmp)}행")
 except Exception as e:
     print(f"JSON 파일 로드 실패: {e}")
     df_json_tmp = pd.DataFrame(columns=["topic", "content"])
 
-# 3. 데이터 합치기 (기존 인덱스 무시하고 0부터 새로 생성)
-df_combined = pd.concat([df_excel_tmp, df_json_tmp], ignore_index=True)
+# 3. 데이터 합치기
+df_combined = pd.concat([df_csv_basic_tmp, df_json_tmp], ignore_index=True)
 
 # 4. 최종 결과 저장
 output_path = "./data/rag_db/combined_rag_data.csv"
 df_combined.to_csv(output_path, index=True, index_label="index", encoding="utf-8-sig")
 
-print("-" * 30)
-print("'topic'과 'content'로 컬럼 통일 및 합치기 완료!")
+print("-" * 40)
+print("최종 통합 완료")
 print(f"총 행 개수: {len(df_combined)}")
-print(f"저장 파일: {output_path}")
-print("-" * 30)
+print(f"결과 파일: {output_path}")
+print("-" * 40)
