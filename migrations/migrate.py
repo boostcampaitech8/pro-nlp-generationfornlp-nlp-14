@@ -2,11 +2,11 @@
 
 이 모듈은 src/vectorstore와 독립적으로 ES 인덱스 DDL 작업을 수행합니다.
 
-CLI Usage:
-    python -m migrations.migrate create    # 인덱스 생성
-    python -m migrations.migrate status    # 상태 확인
-    python -m migrations.migrate drop --confirm   # 삭제
-    python -m migrations.migrate recreate --confirm  # 재생성
+Usage:
+    make migrate-create     # 인덱스 생성
+    make migrate-status     # 상태 확인
+    make migrate-drop       # 삭제
+    make migrate-recreate   # 재생성
 
 환경변수:
     ES_URL: Elasticsearch URL (기본: http://localhost:9200)
@@ -14,7 +14,7 @@ CLI Usage:
     ES_PASSWORD: Basic Auth 비밀번호 (선택)
     ES_PARENTS_INDEX: Parents 인덱스명 (기본: kb_parents_v1)
     ES_CHUNKS_INDEX: Chunks 인덱스명 (기본: kb_chunks_v1)
-    EMBEDDING_DIMS: 임베딩 벡터 차원수 (기본: 1536)
+    EMBEDDING_DIMS: 임베딩 벡터 차원수 (기본: 4096)
 """
 
 from __future__ import annotations
@@ -61,7 +61,7 @@ class MigrationConfig:
             es_password=os.getenv("ES_PASSWORD"),
             parents_index=os.getenv("ES_PARENTS_INDEX", "kb_parents_v1"),
             chunks_index=os.getenv("ES_CHUNKS_INDEX", "kb_chunks_v1"),
-            embedding_dims=int(os.getenv("EMBEDDING_DIMS", "1536")),
+            embedding_dims=int(os.getenv("EMBEDDING_DIMS", "4096")),
         )
 
 
@@ -266,7 +266,7 @@ def main(argv: list[str] | None = None) -> int:
   ES_PASSWORD        Basic Auth 비밀번호
   ES_PARENTS_INDEX   Parents 인덱스명 (기본: kb_parents_v1)
   ES_CHUNKS_INDEX    Chunks 인덱스명 (기본: kb_chunks_v1)
-  EMBEDDING_DIMS     임베딩 벡터 차원수 (기본: 1536)
+  EMBEDDING_DIMS     임베딩 벡터 차원수 (기본: 4096)
 """,
     )
     subparsers = parser.add_subparsers(dest="command", help="명령어")
