@@ -1,18 +1,4 @@
-from multiprocessing.spawn import import_main_path
+from chains.retrieval.chain import build_retriever
+from chains.retrieval.context_builder import build_context
 
-from chains.nodes.tap import tap
-
-from .adapter import LangChainRetrievalAdapter
-from .impl.tavily_web_search import TavilyWebSearchService, TavilyWebServiceParams
-from .nodes.build_context import build_context
-from .nodes.doc_to_response import documents_to_retrieval_responses
-
-__all__ = [
-    "import_main_path",
-    "LangChainRetrievalAdapter",
-    "TavilyWebSearchService",
-    "TavilyWebServiceParams",
-    "build_context",
-    "documents_to_retrieval_responses",
-    "tap",
-]
+__all__ = ["build_retriever", "build_context"]

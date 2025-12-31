@@ -82,3 +82,7 @@ class TavilyWebSearchService(RetrievalServicePort):
                     )
                 )
         return out
+
+
+    def search_all(self, requests: RetrievalRequest[],**kwargs: Any) -> list[list[RetrievalResponse]]:
+        return [self.search(request, kwargs) for request in requests]

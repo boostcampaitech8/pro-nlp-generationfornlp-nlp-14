@@ -12,6 +12,7 @@ Pipeline flow:
 
 from typing import Any, TypedDict
 
+from langchain_core.documents import Document
 from langchain_core.messages import BaseMessage
 from typing_extensions import NotRequired
 
@@ -88,6 +89,22 @@ class DecodedState(ForwardState):
     """
 
     pred: str  # "1".."len_choices"
+
+
+class QueryResult(TypedDict):
+    """
+    단일 query의 검색 결과.
+
+    Retrieval 단계에서 각 query별로 그룹화된 결과를 표현합니다.
+    Reranker가 query 정보를 필요로 하므로 query를 함께 저장합니다.
+
+    LangChain Document를 사용하여 service layer (RetrievalResponse)와
+    chain layer를 디커플링합니다.
+    """
+
+    query: str
+    top_k: int
+    documents: list[Document]
 
 
 class OutputState(TypedDict):

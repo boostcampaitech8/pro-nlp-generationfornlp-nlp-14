@@ -1,24 +1,14 @@
 from __future__ import annotations
 
-from typing import Any, Protocol, runtime_checkable
+from typing import Any
 
 from langchain_core.callbacks import CallbackManagerForRetrieverRun
 from langchain_core.documents import Document
 from langchain_core.retrievers import BaseRetriever
 
+from chains.retrieval.services.base import RetrievalServicePort
 from schemas.retrieval.plan import RetrievalRequest
 from schemas.retrieval.response import RetrievalResponse
-
-
-# ---- 서비스 포트(Protocol) ----
-@runtime_checkable
-class RetrievalServicePort(Protocol):
-    """
-    서버가 RetrievalResponse를 반환하는 'retrieval' 포트.
-    - 명세 협의 전이라 파라미터는 최소만 강제하고 **kwargs로 확장 가능하게 둔다.
-    """
-
-    def search(self, req: RetrievalRequest, **kwargs: Any) -> list[RetrievalResponse]: ...
 
 
 class LangChainRetrievalAdapter(BaseRetriever):

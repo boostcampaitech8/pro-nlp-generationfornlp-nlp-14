@@ -5,6 +5,7 @@ from chains.core.state import (
     OutputState,
     PlanningState,
     QAInputState,
+    QueryResult,
     QuestionState,
     RetrievalState,
 )
@@ -18,6 +19,7 @@ __all__ = [
     "QAInputState",
     "ForwardState",
     "DecodedState",
+    "QueryResult",
     "OutputState",
     # Utils
     "normalize_request",
