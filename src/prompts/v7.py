@@ -17,6 +17,11 @@ class V7Prompt(BasePrompt):
 
 {context}
 
+### 질문:
+{question}
+
+### 선택지:
+{choices}
 정답:"""
 
     PROMPT_QUESTION_PLUS = """아래 지문과 <보기>의 내용을 근거로 할 때, 질문에 대한 가장 적절한 답변을 선택지 {choice_range} 에서 하나만 고르세요.
@@ -34,6 +39,12 @@ class V7Prompt(BasePrompt):
 {choices}
 
 {context}
+
+### 질문:
+{question}
+
+### 선택지:
+{choices}
 
 정답:"""
 

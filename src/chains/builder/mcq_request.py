@@ -24,7 +24,7 @@ def build_mcq_request(
         "question": data.question,
         "choices": data.choices,
         "question_plus": data.question_plus,
-        "context": context,
+        "context": f"### 힌트\n{context}" if context else "",
     }
 
     system_msg = prompt.make_system_prompt(row)
