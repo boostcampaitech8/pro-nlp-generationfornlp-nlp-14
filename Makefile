@@ -84,6 +84,14 @@ inference:
 preprocess:
 	uv run python src/data/preprocess/preprocess.py configs/preprocess.yaml
 
+# rag 데이터 청킹
+chunking:
+	uv run python src/indexing/chunking.py
+
+# rag 데이터 인덱싱
+indexing:
+	uv run python src/indexing/indexing.py $(CONFIG)
+
 # 결과 분석
 analysis:
 	uv run streamlit run src/analysis/streamlit_app.py
