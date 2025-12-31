@@ -76,3 +76,6 @@ notebook = [
     "kiwipiepy==0.22.2",
     "kiwipiepy-model==0.22.1",
 ]
+crawling = [
+    "selenium>=4.39.0",
+]
