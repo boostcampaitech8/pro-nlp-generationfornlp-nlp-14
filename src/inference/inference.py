@@ -77,13 +77,20 @@ def main(config: InferenceConfig):
     def retrieval(state: dict) -> dict:
         plan: RetrievalPlan = state["plan"]
         data: ProcessedQuestion = state["data"]
-        responses: list[RetrievalResponse] = []
+        responses_by_query: list[list[RetrievalResponse]] = []
 
         for req in plan.requests:
             req = normalize_request(req)
             docs = retriever.invoke(req.query, top_k=req.top_k)
             if docs:
                 web_search_docs_logger.invoke({"data": data, "req": req, "docs": docs})
+            responses_by_query.append(documents_to_retrieval_responses(req.query, docs))
+
+        # 라운드 로빈 방식으로 서로 다른 쿼리의 컨텍스트를 섞어서 배치 (zip_longest)
+        responses: list[RetrievalResponse] = []
+        if responses_by_query:
+            for grouped in zip_longest(*responses_by_query):
+                responses.extend(res for res in grouped if res)
 
         context = build_context(responses, max_chars=MAX_CTX_CHARS)
         return {
