@@ -105,9 +105,13 @@ def main(config: InferenceConfig):
     # -------MCQ chain---------
     qa_chain = build_mcq_chain(config)
 
-    mcp_prompt = RunnableLambda(
-        lambda s: build_mcq_request(prompt_manager, s["data"], context=s.get("context", ""))
-    )
+    def _build_mcq_prompt_input(state: ProcessedQuestion | dict) -> RetrievalRequest:
+        if isinstance(state, dict):
+            data = state.get("data")
+            context = state.get("context", "")
+        return build_mcq_request(prompt_manager, data, context=context)
+
+    mcp_prompt = RunnableLambda(_build_mcq_prompt_input)
 
     # long path: planner + retrieval
     # planner 출력 보정까지 붙일 거면:
