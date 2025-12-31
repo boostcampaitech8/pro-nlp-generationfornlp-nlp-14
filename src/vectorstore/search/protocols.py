@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from typing import Any, Protocol
 
-from .types import SearchHit, SearchParams
+from vectorstore.search.types import SearchHit, SearchParams
 
 
 class SearcherProtocol(Protocol):

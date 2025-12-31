@@ -9,8 +9,8 @@ from typing import Any
 
 from elasticsearch import Elasticsearch
 
-from ..config import ESConfig
-from .types import SearchHit, SearchParams
+from vectorstore.config import ESConfig
+from vectorstore.search.types import SearchHit, SearchParams
 
 
 class HybridSearcher:

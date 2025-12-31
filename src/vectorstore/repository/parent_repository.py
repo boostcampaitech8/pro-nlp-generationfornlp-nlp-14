@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from ..documents import ParentDoc
-from .base import BaseRepository
+from vectorstore.documents import ParentDoc
+from vectorstore.repository.base import BaseRepository
 
 
 class ParentRepository(BaseRepository[ParentDoc]):

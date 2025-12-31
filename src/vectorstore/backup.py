@@ -23,9 +23,9 @@ from typing import Any
 
 from elasticsearch import Elasticsearch
 
-from .config import ESConfig
-from .documents import ChunkDoc, ParentDoc
-from .repository import ChunkRepository, ParentRepository
+from vectorstore.config import ESConfig
+from vectorstore.documents import ChunkDoc, ParentDoc
+from vectorstore.repository import ChunkRepository, ParentRepository
 
 logger = logging.getLogger(__name__)
 
