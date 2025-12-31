@@ -76,15 +76,18 @@ class LangChainRetrievalAdapter(BaseRetriever):
 
         docs: list[Document] = []
         for i, r in enumerate(responses):
+            metadata = {
+                "source": self._source_name,
+                "question": r.question or query,
+                "rank": i,
+                "top_k": int(k),
+            }
+            if isinstance(r.metadata, dict):
+                metadata.update(r.metadata)
             docs.append(
                 Document(
                     page_content=r.context or "",
-                    metadata={
-                        "source": self._source_name,
-                        "question": r.question or query,
-                        "rank": i,
-                        "top_k": self._top_k,
-                    },
+                    metadata=metadata,
                 )
             )
         return docs
