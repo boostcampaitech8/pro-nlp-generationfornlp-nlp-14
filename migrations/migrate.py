@@ -190,7 +190,7 @@ def _format_bytes(size_bytes: int | float) -> str:
 
 def cmd_status(migrator: Migrator) -> int:
     """인덱스 상태 출력."""
-    print("\n�� Elasticsearch Index Status")
+    print("\nElasticsearch Index Status")
     print("=" * 50)
 
     status = migrator.status()
