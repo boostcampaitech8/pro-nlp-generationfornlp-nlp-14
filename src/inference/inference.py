@@ -1,5 +1,7 @@
 import os
 import sys
+from itertools import zip_longest
+from typing import Any
 
 import pandas as pd
 from dotenv import load_dotenv
@@ -14,6 +16,11 @@ from tqdm import tqdm
 
 from chains.builder import build_mcq_chain, build_retriever
 from chains.builder.mcq_request import build_mcq_request
+from chains.nodes import (
+    build_query_plan_logger,
+    build_web_search_docs_logger,
+    normalize_request,
+)
 from chains.planning.coercion import _coerce_plan
 from chains.planning.mapper import _to_prompt_input
 from chains.retrieval.nodes.build_context import build_context
@@ -32,6 +39,8 @@ from utils import InferenceConfig
 
 MAX_PARA_CHARS = 10_000
 MAX_CTX_CHARS = 4_000
+QUERY_PLAN_LOG_PATH = "log/query_decompositions.jsonl"
+WEB_SEARCH_DOCS_LOG_PATH = "log/web_search_docs.jsonl"
 
 
 def main(config: InferenceConfig):
@@ -42,6 +51,9 @@ def main(config: InferenceConfig):
     # 테스트 데이터 로드 및 전처리
     test_df = load_and_parse_data(config.test_data)
     prompt_manager = get_prompt_manager(config.prompt_style)
+    # logger
+    query_plan_logger = build_query_plan_logger(QUERY_PLAN_LOG_PATH)
+    web_search_docs_logger = build_web_search_docs_logger(WEB_SEARCH_DOCS_LOG_PATH)
 
     retriever = build_retriever()
 
@@ -68,9 +80,10 @@ def main(config: InferenceConfig):
         responses: list[RetrievalResponse] = []
 
         for req in plan.requests:
-            req = req if isinstance(req, RetrievalRequest) else RetrievalRequest(**req)
+            req = normalize_request(req)
             docs = retriever.invoke(req.query, top_k=req.top_k)
-            responses.extend(documents_to_retrieval_responses(req.query, docs))
+            if docs:
+                web_search_docs_logger.invoke({"data": data, "req": req, "docs": docs})
 
         context = build_context(responses, max_chars=MAX_CTX_CHARS)
         return {
@@ -84,6 +97,7 @@ def main(config: InferenceConfig):
 
     # -------MCQ chain---------
     qa_chain = build_mcq_chain(config)
+
     mcp_prompt = RunnableLambda(
         lambda s: build_mcq_request(prompt_manager, s["data"], context=s.get("context", ""))
     )
@@ -96,12 +110,15 @@ def main(config: InferenceConfig):
             data=RunnablePassthrough(),  # data 그대로 유지
             plan=planner,  # planner 실행
         )
+        | query_plan_logger
         | retrieval_step
         | mcp_prompt
         | qa_chain
-    )
+    ).with_config(tags=["planned"], metadata={"path": "planned", "type": "planned"})
     # short path: planner/retrieval 모두 스킵
-    short_path = mcp_prompt | qa_chain
+    short_path = (mcp_prompt | qa_chain).with_config(
+        tags=["no_plan"], metadata={"path": "no_plan", "type": "no_plan"}
+    )
 
     MIN_PARA_CHARS_FOR_PLANNER = 600
 
@@ -122,7 +139,10 @@ def main(config: InferenceConfig):
             choices=row["choices"],
             question_plus=row.get("question_plus"),
         )
-        outs = whole_chain.invoke(data)
+        outs = whole_chain.invoke(
+            data,
+            config={"run_name": str(data.id)},
+        )
         infer_results.append(outs)
 
     preds, score = map(list, zip(*infer_results, strict=True))

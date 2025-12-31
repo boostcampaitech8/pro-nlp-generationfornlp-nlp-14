@@ -1,7 +1,6 @@
 import json
 from collections.abc import Callable
 from dataclasses import asdict, is_dataclass
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -25,7 +24,7 @@ def tap(path: str, build_record: Callable[[Any], dict]) -> RunnableLambda:
         try:
             p.parent.mkdir(parents=True, exist_ok=True)
             rec = _to_jsonable(build_record(x))
-            rec = {"ts": datetime.now(timezone.utc).isoformat(), **rec}
+            rec = {**rec}
             with p.open("a", encoding="utf-8") as f:
                 f.write(json.dumps(rec, ensure_ascii=False) + "\n")
         except Exception:
