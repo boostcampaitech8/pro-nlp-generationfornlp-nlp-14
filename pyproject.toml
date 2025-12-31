@@ -18,6 +18,7 @@ dependencies = [
     "datasets==4.3.0",
     "langchain-openai==1.1.6",
     "langchain-text-splitters>=1.1.0",
+    "elasticsearch==8.19.3",
 ]
 
 [tool.setuptools.packages.find]
