@@ -68,5 +68,17 @@ class TavilyWebSearchService(RetrievalServicePort):
         out: list[RetrievalResponse] = []
         for item in results[: params["max_results"]]:
             if isinstance(item, dict):
-                out.append(RetrievalResponse(question=req.query, context=_format_context(item)))
+                metadata = {
+                    "title": item.get("title"),
+                    "url": item.get("url"),
+                    "score": item.get("score") or item.get("relevance_score"),
+                    "raw_result": item,
+                }
+                out.append(
+                    RetrievalResponse(
+                        question=req.query,
+                        context=_format_context(item),
+                        metadata=metadata,
+                    )
+                )
         return out
