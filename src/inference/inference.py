@@ -27,9 +27,6 @@ from schemas.mcq.rows import PredRow, ScoreRow
 from schemas.retrieval import RetrievalPlan
 from utils import InferenceConfig
 
-MAX_CTX_CHARS = 4_000
-QUERY_PLAN_LOG_PATH = "log/query_decompositions.jsonl"
-
 
 def main(config: InferenceConfig):
     """추론 메인 함수
@@ -52,7 +49,7 @@ def main(config: InferenceConfig):
         base_url=os.environ["LLAMA_CPP_SERVER_URL"],
         api_key="API_KEY_NOT_NEED",  # type: ignore
         model="LLama_cpp_model",
-        temperature=1.0,
+        temperature=config.planner_llm_temperature,
     )
     planner = build_planner(llm=planner_llm, prompt=plan_prompt)
 
@@ -86,7 +83,7 @@ def main(config: InferenceConfig):
         docs = round_robin_merge(query_results)
 
         # Documents → context string
-        context = build_context(docs, max_chars=MAX_CTX_CHARS)
+        context = build_context(docs, max_chars=config.max_retrieval_context_chars)
 
         return {
             "data": data,
@@ -99,7 +96,7 @@ def main(config: InferenceConfig):
     # 6) Long path: planner → retrieval → qa
     # -------------------------
     # Query plan 로깅
-    query_plan_logger = tap(QUERY_PLAN_LOG_PATH)
+    query_plan_logger = tap(config.query_plan_log_path)
 
     def log_plan(state: dict) -> dict:
         """Plan을 로깅하면서 state 통과"""
@@ -135,11 +132,9 @@ def main(config: InferenceConfig):
     # -------------------------
     # 8) Branch: paragraph가 짧으면 short path, 아니면 long path
     # -------------------------
-    MIN_PARA_CHARS_FOR_PLANNER = 600
-
     whole_chain = RunnableBranch(
         (
-            lambda data: len((data["paragraph"] or "").strip()) > MIN_PARA_CHARS_FOR_PLANNER,
+            lambda data: len((data["paragraph"] or "").strip()) > config.max_paragraph_chars_for_planner,
             short_path,
         ),
         long_path,  # default

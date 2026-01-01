@@ -179,6 +179,14 @@ class InferenceConfig(BaseConfig):
     # 출력 설정
     output_path: str
 
+    # Pipeline 설정
+    max_retrieval_context_chars: int
+    max_paragraph_chars_for_planner: int
+    query_plan_log_path: str
+
+    # Planner LLM 설정
+    planner_llm_temperature: float
+
     _yaml_key_mapping: ClassVar[dict[str, str]] = {
         "model_checkpoint_path": "checkpoint_path",
         "data_test_path": "test_data",
@@ -186,6 +194,10 @@ class InferenceConfig(BaseConfig):
         "output_path": "output_path",
         "FLM_max_seq_length": "max_seq_length",
         "use_remote": "use_remote",
+        "pipeline_max_retrieval_context_chars": "max_retrieval_context_chars",
+        "pipeline_max_paragraph_chars_for_planner": "max_paragraph_chars_for_planner",
+        "pipeline_query_plan_log_path": "query_plan_log_path",
+        "planner_llm_temperature": "planner_llm_temperature",
     }
 
 
