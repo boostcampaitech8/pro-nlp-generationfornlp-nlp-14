@@ -1,10 +1,16 @@
+"""
+Tavily 웹 검색 기반 Retriever 빌더.
+
+BaseRetriever를 생성하여 반환합니다.
+"""
+
 from __future__ import annotations
 
 from langchain_core.retrievers import BaseRetriever
 from tavily import TavilyClient
 
 from chains.retrieval.adapter.RetrievalAdapter import LangChainRetrievalAdapter
-from chains.retrieval.impl.tavily_web_search import TavilyWebSearchService
+from chains.retrieval.services.tavily import TavilyWebSearchService
 
 WEBSEARCH_EXCLUDE_DOMAINS = [
     "reddit.com",
@@ -30,11 +36,17 @@ WEBSEARCH_EXCLUDE_DOMAINS = [
 ]
 
 
-def build_retriever() -> BaseRetriever:
+def build_tavily_retriever() -> BaseRetriever:
     """
-    지금은 Tavily 웹 검색만 쓰므로 TavilyWebSearchService를 만들어 반환한다.
-    - api_key가 None이면 env(TAVILY_API_KEY)에서 읽는다.
-    - options는 TypedDict 타입이지만, 실제 값은 'dict'로 넘겨야 한다.
+    Tavily 웹 검색 서비스를 사용하는 BaseRetriever를 생성합니다.
+
+    Returns:
+        LangChainRetrievalAdapter로 감싼 BaseRetriever
+
+    Note:
+        - api_key가 None이면 env(TAVILY_API_KEY)에서 읽습니다.
+        - options는 TypedDict 타입이지만, 실제 값은 'dict'로 넘겨야 합니다.
+        - Adapter + Service 패턴으로 구성됩니다.
     """
 
     service = TavilyWebSearchService(

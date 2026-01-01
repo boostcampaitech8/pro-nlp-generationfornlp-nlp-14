@@ -8,7 +8,6 @@ from langchain_core.retrievers import BaseRetriever
 
 from chains.retrieval.services.base import RetrievalServicePort
 from schemas.retrieval.plan import RetrievalRequest
-from schemas.retrieval.response import RetrievalResponse
 
 
 class LangChainRetrievalAdapter(BaseRetriever):
@@ -23,7 +22,7 @@ class LangChainRetrievalAdapter(BaseRetriever):
     def __init__(
         self,
         *,
-        service,
+        service: RetrievalServicePort,
         top_k: int = 5,
         default_kwargs: dict[str, Any] | None = None,
         source_name: str = "retrieval_service",

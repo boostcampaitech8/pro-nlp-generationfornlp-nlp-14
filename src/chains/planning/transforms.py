@@ -26,7 +26,7 @@ def to_prompt_input(data: dict) -> dict:
         Prompt template에 전달할 dict
     """
     choices = data.get("choices", [])
-    choices_text = "\n".join(f"{i+1}. {choice}" for i, choice in enumerate(choices))
+    choices_text = "\n".join(f"{i + 1}. {choice}" for i, choice in enumerate(choices))
 
     question_plus = data.get("question_plus")
     question_plus_block = ""

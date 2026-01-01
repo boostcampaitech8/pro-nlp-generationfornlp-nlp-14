@@ -6,7 +6,7 @@ from typing import Any, Literal, TypedDict
 
 from tavily import TavilyClient
 
-from chains.retrieval.adapter.RetrievalAdapter import RetrievalServicePort
+from chains.retrieval.services.base import RetrievalServicePort
 from schemas.retrieval.plan import RetrievalRequest
 from schemas.retrieval.response import RetrievalResponse
 
@@ -56,10 +56,10 @@ class TavilyWebSearchService(RetrievalServicePort):
         params.update(kwargs)
 
         # 2) max_results는 한 번만 결정해서 넣기 (중복 방지)
-        params["max_results"] = req.top_k
+        params["max_results"] = request.top_k
 
         # 3) query는 TavilyClient.search의 필수 인자
-        response = self._client.search(query=req.query, **params)
+        response = self._client.search(query=request.query, **params)
 
         results = response.get("results", []) or []
         if not isinstance(results, list):
@@ -76,13 +76,14 @@ class TavilyWebSearchService(RetrievalServicePort):
                 }
                 out.append(
                     RetrievalResponse(
-                        question=req.query,
+                        question=request.query,
                         context=_format_context(item),
                         metadata=metadata,
                     )
                 )
         return out
 
-
-    def search_all(self, requests: RetrievalRequest[],**kwargs: Any) -> list[list[RetrievalResponse]]:
-        return [self.search(request, kwargs) for request in requests]
+    def search_all(
+        self, requests: list[RetrievalRequest], **kwargs: Any
+    ) -> list[list[RetrievalResponse]]:
+        return [self.search(request, **kwargs) for request in requests]

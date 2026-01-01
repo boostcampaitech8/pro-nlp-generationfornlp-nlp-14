@@ -1,3 +1,3 @@
-from .RetrievalAdapter import LangChainRetrievalAdapter, RetrievalServicePort
+from .RetrievalAdapter import LangChainRetrievalAdapter
 
-__all__ = ["RetrievalServicePort", "LangChainRetrievalAdapter"]
+__all__ = ["LangChainRetrievalAdapter"]

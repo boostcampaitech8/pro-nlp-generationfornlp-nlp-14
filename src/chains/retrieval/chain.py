@@ -13,11 +13,11 @@ from chains.core.utils import normalize_request
 from schemas.retrieval import RetrievalPlan
 
 
-def build_retriever(
+def build_multi_query_retriever(
     retriever: BaseRetriever,
 ) -> chain:
     """
-    Retrieval chain 생성.
+    Multi-query retrieval chain 생성.
 
     BaseRetriever를 RetrievalPlan 처리기로 감쌉니다.
     각 query를 순차적으로 처리하며, query별로 결과를 그룹화합니다.
@@ -29,12 +29,13 @@ def build_retriever(
         Runnable[RetrievalPlan, list[QueryResult]]
 
     Example:
-        >>> from chains.retrieval.adapters.langchain_adapter import LangChainRetrievalAdapter
-        >>> from chains.retrieval.services.tavily import TavilyWebSearchService
+        >>> from chains.retrieval.adapter import LangChainRetrievalAdapter
+        >>> from chains.retrieval.services import TavilyWebSearchService
+        >>> from tavily import TavilyClient
         >>>
-        >>> service = TavilyWebSearchService()
-        >>> adapter = LangChainRetrievalAdapter(service=service)
-        >>> retriever_chain = build_retriever(adapter)
+        >>> service = TavilyWebSearchService(TavilyClient(), options={})
+        >>> adapter = LangChainRetrievalAdapter(service=service, source_name="web")
+        >>> retriever_chain = build_multi_query_retriever(adapter)
         >>>
         >>> plan = RetrievalPlan(requests=[...])
         >>> results = retriever_chain.invoke(plan)  # list[QueryResult]

@@ -12,13 +12,12 @@ from langchain_core.runnables import (
 from langchain_openai import ChatOpenAI
 from tqdm import tqdm
 
-from chains.builder.retriever import build_retriever as build_base_retriever
 from chains.core.logging import tap
 from chains.core.state import QuestionState
 from chains.core.utils import round_robin_merge
 from chains.planning import build_planner
 from chains.qa import build_qa_chain
-from chains.retrieval import build_retriever
+from chains.retrieval import build_multi_query_retriever, build_tavily_retriever
 from chains.retrieval.context_builder import build_context
 from data.data_processing import load_and_parse_data
 from prompts import get_prompt_manager
@@ -40,7 +39,7 @@ def main(config: InferenceConfig):
     # -------------------------
     # 1) Base retriever 생성
     # -------------------------
-    base_retriever = build_base_retriever()
+    base_retriever = build_tavily_retriever()
 
     # -------------------------
     # 2) Planner 생성
@@ -54,9 +53,9 @@ def main(config: InferenceConfig):
     planner = build_planner(llm=planner_llm, prompt=plan_prompt)
 
     # -------------------------
-    # 3) Retriever chain 생성
+    # 3) Multi-query retriever chain 생성
     # -------------------------
-    retriever_chain = build_retriever(retriever=base_retriever)
+    retriever_chain = build_multi_query_retriever(retriever=base_retriever)
 
     # -------------------------
     # 4) QA chain 생성
@@ -134,7 +133,8 @@ def main(config: InferenceConfig):
     # -------------------------
     whole_chain = RunnableBranch(
         (
-            lambda data: len((data["paragraph"] or "").strip()) > config.max_paragraph_chars_for_planner,
+            lambda data: len((data["paragraph"] or "").strip())
+            > config.max_paragraph_chars_for_planner,
             short_path,
         ),
         long_path,  # default
