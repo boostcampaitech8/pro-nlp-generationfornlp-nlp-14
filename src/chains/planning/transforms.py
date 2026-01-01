@@ -34,8 +34,7 @@ def to_prompt_input(data: dict) -> dict:
         question_plus_block = f"<보기>\n{question_plus}\n</보기>\n\n"
 
     return {
-        "paragraph": data.get("paragraph", ""),
-        "question": data.get("question", ""),
+        **data,
         "choices_text": choices_text,
         "question_plus_block": question_plus_block,
     }

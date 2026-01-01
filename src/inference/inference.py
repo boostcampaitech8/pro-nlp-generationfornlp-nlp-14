@@ -1,7 +1,5 @@
 import os
 import sys
-from itertools import zip_longest
-from typing import Any
 
 import pandas as pd
 from dotenv import load_dotenv
@@ -14,33 +12,23 @@ from langchain_core.runnables import (
 from langchain_openai import ChatOpenAI
 from tqdm import tqdm
 
-from chains.builder import build_mcq_chain, build_retriever
-from chains.builder.mcq_request import build_mcq_request
-from chains.nodes import (
-    build_query_plan_logger,
-    build_web_search_docs_logger,
-    normalize_request,
-)
-from chains.planning.coercion import _coerce_plan
-from chains.planning.mapper import _to_prompt_input
-from chains.retrieval.nodes.build_context import build_context
-from chains.retrieval.nodes.doc_to_response import (
-    documents_to_retrieval_responses,
-)
+from chains.builder.retriever import build_retriever as build_base_retriever
+from chains.core.logging import tap
+from chains.core.state import QuestionState
+from chains.core.utils import round_robin_merge
+from chains.planning import build_planner
+from chains.qa import build_qa_chain
+from chains.retrieval import build_retriever
+from chains.retrieval.context_builder import build_context
 from data.data_processing import load_and_parse_data
 from prompts import get_prompt_manager
 from prompts.plan.plan import plan_prompt
 from schemas.mcq.rows import PredRow, ScoreRow
-from schemas.processed_question import ProcessedQuestion
 from schemas.retrieval import RetrievalPlan
-from schemas.retrieval.plan import RetrievalRequest
-from schemas.retrieval.response import RetrievalResponse
 from utils import InferenceConfig
 
-MAX_PARA_CHARS = 10_000
 MAX_CTX_CHARS = 4_000
 QUERY_PLAN_LOG_PATH = "log/query_decompositions.jsonl"
-WEB_SEARCH_DOCS_LOG_PATH = "log/web_search_docs.jsonl"
 
 
 def main(config: InferenceConfig):
@@ -51,14 +39,14 @@ def main(config: InferenceConfig):
     # 테스트 데이터 로드 및 전처리
     test_df = load_and_parse_data(config.test_data)
     prompt_manager = get_prompt_manager(config.prompt_style)
-    # logger
-    query_plan_logger = build_query_plan_logger(QUERY_PLAN_LOG_PATH)
-    web_search_docs_logger = build_web_search_docs_logger(WEB_SEARCH_DOCS_LOG_PATH)
-
-    retriever = build_retriever()
 
     # -------------------------
-    # 1) planner LLM
+    # 1) Base retriever 생성
+    # -------------------------
+    base_retriever = build_base_retriever()
+
+    # -------------------------
+    # 2) Planner 생성
     # -------------------------
     planner_llm = ChatOpenAI(
         base_url=os.environ["LLAMA_CPP_SERVER_URL"],
@@ -66,76 +54,92 @@ def main(config: InferenceConfig):
         model="LLama_cpp_model",
         temperature=1.0,
     )
+    planner = build_planner(llm=planner_llm, prompt=plan_prompt)
 
-    planner = (
-        RunnableLambda(_to_prompt_input)
-        | plan_prompt
-        | planner_llm.with_structured_output(RetrievalPlan)
-        | RunnableLambda(_coerce_plan)
-    )
+    # -------------------------
+    # 3) Retriever chain 생성
+    # -------------------------
+    retriever_chain = build_retriever(retriever=base_retriever)
 
-    def retrieval(state: dict) -> dict:
+    # -------------------------
+    # 4) QA chain 생성
+    # -------------------------
+    qa_chain = build_qa_chain(config=config, prompt_manager=prompt_manager)
+
+    # -------------------------
+    # 5) Retrieval step (planner 결과 → context)
+    # -------------------------
+    def retrieval_step(state: dict) -> dict:
+        """
+        RetrievalPlan을 받아 검색하고 context를 생성합니다.
+
+        Input: {"data": QuestionState, "plan": RetrievalPlan}
+        Output: {"data": QuestionState, "context": str}
+        """
         plan: RetrievalPlan = state["plan"]
-        data: ProcessedQuestion = state["data"]
-        responses_by_query: list[list[RetrievalResponse]] = []
+        data: QuestionState = state["data"]
 
-        for req in plan.requests:
-            req = normalize_request(req)
-            docs = retriever.invoke(req.query, top_k=req.top_k)
-            if docs:
-                web_search_docs_logger.invoke({"data": data, "req": req, "docs": docs})
-            responses_by_query.append(documents_to_retrieval_responses(req.query, docs))
+        # Retriever chain 실행 → list[QueryResult]
+        query_results = retriever_chain.invoke(plan)
 
-        # 라운드 로빈 방식으로 서로 다른 쿼리의 컨텍스트를 섞어서 배치 (zip_longest)
-        responses: list[RetrievalResponse] = []
-        if responses_by_query:
-            for grouped in zip_longest(*responses_by_query):
-                responses.extend(res for res in grouped if res)
+        # QueryResult의 documents를 round-robin merge
+        docs = round_robin_merge(query_results)
 
-        context = build_context(responses, max_chars=MAX_CTX_CHARS)
+        # Documents → context string
+        context = build_context(docs, max_chars=MAX_CTX_CHARS)
+
         return {
             "data": data,
-            "plan": plan,
-            "external_knowledge": responses,
             "context": context,
         }
 
-    retrieval_step = RunnableLambda(retrieval)
+    retrieval = RunnableLambda(retrieval_step)
 
-    # -------MCQ chain---------
-    qa_chain = build_mcq_chain(config)
+    # -------------------------
+    # 6) Long path: planner → retrieval → qa
+    # -------------------------
+    # Query plan 로깅
+    query_plan_logger = tap(QUERY_PLAN_LOG_PATH)
 
-    def _build_mcq_prompt_input(state: ProcessedQuestion | dict) -> RetrievalRequest:
-        if isinstance(state, dict):
-            data = state.get("data")
-            context = state.get("context", "")
-        return build_mcq_request(prompt_manager, data, context=context)
+    def log_plan(state: dict) -> dict:
+        """Plan을 로깅하면서 state 통과"""
+        query_plan_logger.invoke(
+            {
+                "id": state["data"]["id"],
+                "plan": state["plan"],
+            }
+        )
+        return state
 
-    mcp_prompt = RunnableLambda(_build_mcq_prompt_input)
-
-    # long path: planner + retrieval
-    # planner 출력 보정까지 붙일 거면:
-    # planner_step = planner_step | RunnableLambda(fix_plan)
     long_path = (
         RunnableParallel(
             data=RunnablePassthrough(),  # data 그대로 유지
             plan=planner,  # planner 실행
         )
-        | query_plan_logger
-        | retrieval_step
-        | mcp_prompt
-        | qa_chain
+        | RunnableLambda(log_plan)  # 로깅
+        | retrieval  # 검색 및 context 생성
+        | qa_chain  # QA 추론
     ).with_config(tags=["planned"], metadata={"path": "planned", "type": "planned"})
-    # short path: planner/retrieval 모두 스킵
-    short_path = (mcp_prompt | qa_chain).with_config(
-        tags=["no_plan"], metadata={"path": "no_plan", "type": "no_plan"}
-    )
 
+    # -------------------------
+    # 7) Short path: qa only (no planning, no retrieval)
+    # -------------------------
+    short_path = (
+        RunnableParallel(
+            data=RunnablePassthrough(),  # QuestionState 그대로 전달
+            context=RunnableLambda(lambda _: ""),  # 빈 context
+        )
+        | qa_chain
+    ).with_config(tags=["no_plan"], metadata={"path": "no_plan", "type": "no_plan"})
+
+    # -------------------------
+    # 8) Branch: paragraph가 짧으면 short path, 아니면 long path
+    # -------------------------
     MIN_PARA_CHARS_FOR_PLANNER = 600
 
     whole_chain = RunnableBranch(
         (
-            lambda data: len((data.paragraph or "").strip()) > MIN_PARA_CHARS_FOR_PLANNER,
+            lambda data: len((data["paragraph"] or "").strip()) > MIN_PARA_CHARS_FOR_PLANNER,
             short_path,
         ),
         long_path,  # default
@@ -143,16 +147,14 @@ def main(config: InferenceConfig):
 
     infer_results: list[tuple[PredRow, ScoreRow]] = []
     for _, row in tqdm(test_df.iterrows(), desc="Inference"):
-        data = ProcessedQuestion(
-            id=row["id"],
-            paragraph=row["paragraph"],
-            question=row["question"],
-            choices=row["choices"],
-            question_plus=row.get("question_plus"),
-        )
+        # QuestionState (TypedDict) 생성
+        data: QuestionState = {
+            **row,
+            "len_choices": len(row["choices"]),
+        }
         outs = whole_chain.invoke(
             data,
-            config={"run_name": str(data.id)},
+            config={"run_name": str(data["id"])},
         )
         infer_results.append(outs)
 

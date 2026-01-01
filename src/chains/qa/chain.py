@@ -50,7 +50,7 @@ def build_qa_chain(
 
     prompt_builder = RunnableLambda(
         lambda state: build_mcq_request(
-            prompt_manager, state["data"], state.get("context", "")
+            prompt_manager, state["data"], context=state.get("context", "")
         )
     )
 

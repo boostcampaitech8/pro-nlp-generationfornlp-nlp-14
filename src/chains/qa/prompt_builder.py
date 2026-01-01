@@ -1,39 +1,33 @@
+from chains.core.state import QuestionState
 from prompts.base import BasePrompt
-from schemas.processed_question import ProcessedQuestion
 
 
 def build_mcq_request(
     prompt: BasePrompt,
-    data: ProcessedQuestion,
+    data: QuestionState,
     *,
     context: str = "",
 ) -> dict:
-    """v7부터 사용가능
+    """MCQ request 생성 (TypedDict 기반)
 
     Args:
-        prompt (BasePrompt): _description_
-        data (ProcessedQuestion): _description_
-        context (str, optional): _description_. Defaults to "".
+        prompt (BasePrompt): 프롬프트 매니저
+        data (QuestionState): 질문 상태 (TypedDict)
+        context (str, optional): 외부 컨텍스트. Defaults to "".
 
     Returns:
-        dict: _description_
+        dict: QA chain 입력 형태 (id, messages, len_choices)
     """
-    row = {
-        "id": data.id,
-        "paragraph": data.paragraph,
-        "question": data.question,
-        "choices": data.choices,
-        "question_plus": data.question_plus,
-        "context": f"### 힌트\n{context}" if context else "",
-    }
+    # QuestionState에 context 추가
+    row = {**data, "context": f"### 힌트\n{context}" if context else ""}
 
     system_msg = prompt.make_system_prompt(row)
     user_msg = prompt.make_user_prompt(row)
     return {
-        "id": data.id,
+        "id": data["id"],
         "messages": [
             {"role": "system", "content": system_msg},
             {"role": "user", "content": user_msg},
         ],
-        "len_choices": len(data.choices),
+        "len_choices": data["len_choices"],
     }
