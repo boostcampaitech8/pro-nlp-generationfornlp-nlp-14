@@ -85,39 +85,29 @@ def main(config: InferenceConfig):
         )
         return state
 
-    long_path = (
-        RunnableParallel(
-            data=RunnablePassthrough(),  # data 그대로 유지
-            plan=planner,  # planner 실행
-        )
-        | RunnableLambda(log_plan)  # 로깅
-        | retrieval_chain  # 검색 및 context 생성
-        | qa_chain  # QA 추론
-    ).with_config(tags=["planned"], metadata={"path": "planned", "type": "planned"})
-
-    # -------------------------
-    # 6) Short path: qa only (no planning, no retrieval)
-    # -------------------------
-    short_path = (
-        RunnableParallel(
-            data=RunnablePassthrough(),  # QuestionState 그대로 전달
-            context=RunnableLambda(lambda _: ""),  # 빈 context
-        )
-        | qa_chain
-    ).with_config(tags=["no_plan"], metadata={"path": "no_plan", "type": "no_plan"})
+    context_chain = RunnableBranch(
+        (
+            lambda x: len((x["paragraph"] or "").strip())
+            < config.max_paragraph_chars_for_planner,  # paragraph가 짧으면
+            (
+                RunnableParallel(data=RunnablePassthrough(), plan=planner)
+                | RunnableLambda(log_plan)
+                | retrieval_chain
+            ),  # retrieval 실행
+        ),
+        lambda _: "",  # paragraph가 길면 빈 context
+    )
 
     # -------------------------
     # 7) Branch: paragraph가 짧으면 short path, 아니면 long path
     # -------------------------
-    whole_chain = RunnableBranch(
-        (
-            lambda data: len((data["paragraph"] or "").strip())
-            > config.max_paragraph_chars_for_planner,
-            short_path,
-        ),
-        long_path,  # default
+    whole_chain = (
+        RunnableParallel(
+            data=RunnablePassthrough(),
+            context=context_chain,
+        )
+        | qa_chain
     )
-
     infer_results: list[tuple[PredRow, ScoreRow]] = []
     for _, row in tqdm(test_df.iterrows(), desc="Inference"):
         # QuestionState (TypedDict) 생성
