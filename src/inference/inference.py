@@ -5,7 +5,6 @@ import pandas as pd
 from dotenv import load_dotenv
 from langchain_core.runnables import (
     RunnableBranch,
-    RunnableLambda,
     RunnableParallel,
     RunnablePassthrough,
 )
@@ -69,17 +68,10 @@ def main(config: InferenceConfig):
     # -------------------------
     # 4) Context chain 생성 -> paragraph 길이에 따라 Branch
     # -------------------------
-    query_plan_logger = tap(config.query_plan_log_path)
-
-    def log_plan(state: dict) -> dict:
-        """Plan을 로깅하면서 state 통과"""
-        query_plan_logger.invoke(
-            {
-                "id": state["data"]["id"],
-                "plan": state["plan"],
-            }
-        )
-        return state
+    query_plan_logger = tap(
+        config.query_plan_log_path,
+        transform=lambda s: {"id": s["data"]["id"], "plan": s["plan"]},
+    )
 
     context_chain = RunnableBranch(
         (
@@ -88,7 +80,7 @@ def main(config: InferenceConfig):
             ),  # paragraph가 짧으면
             (
                 RunnableParallel(data=RunnablePassthrough(), plan=planner)
-                | RunnableLambda(log_plan)
+                | query_plan_logger
                 | retrieval_chain
             ),  # retrieval 실행
         ),
