@@ -23,7 +23,6 @@ from data.data_processing import load_and_parse_data
 from prompts import get_prompt_manager
 from prompts.plan.plan import plan_prompt
 from schemas.mcq.rows import PredRow, ScoreRow
-from schemas.retrieval import RetrievalPlan
 from utils import InferenceConfig
 
 
@@ -53,30 +52,25 @@ def main(config: InferenceConfig):
     planner = build_planner(llm=planner_llm, prompt=plan_prompt)
 
     # -------------------------
-    # 3) Multi-query retriever chain 생성
+    # 3) retriever chain 생성
     # -------------------------
-    multi_query_retriever = build_multi_query_retriever(retriever=base_retriever)
-
-    # -------------------------
-    # 4) Retrieval step (planner 결과 → context)
-    # -------------------------
-    retrieval = RunnableParallel(
+    retrieval_chain = RunnableParallel(
         data=lambda x: x["data"],
         context=(
             lambda x: x["plan"]
-            | multi_query_retriever
+            | build_multi_query_retriever(retriever=base_retriever)
             | round_robin_merge
             | (lambda docs: build_context(docs, max_chars=config.max_retrieval_context_chars))
         ),
     )
 
     # -------------------------
-    # 5) QA chain 생성
+    # 4) QA chain 생성
     # -------------------------
     qa_chain = build_qa_chain(config=config, prompt_manager=prompt_manager)
 
     # -------------------------
-    # 6) Long path: planner → retrieval → qa
+    # 5) Long path: planner → retrieval → qa
     # -------------------------
     # Query plan 로깅
     query_plan_logger = tap(config.query_plan_log_path)
@@ -97,12 +91,12 @@ def main(config: InferenceConfig):
             plan=planner,  # planner 실행
         )
         | RunnableLambda(log_plan)  # 로깅
-        | retrieval  # 검색 및 context 생성
+        | retrieval_chain  # 검색 및 context 생성
         | qa_chain  # QA 추론
     ).with_config(tags=["planned"], metadata={"path": "planned", "type": "planned"})
 
     # -------------------------
-    # 7) Short path: qa only (no planning, no retrieval)
+    # 6) Short path: qa only (no planning, no retrieval)
     # -------------------------
     short_path = (
         RunnableParallel(
@@ -113,7 +107,7 @@ def main(config: InferenceConfig):
     ).with_config(tags=["no_plan"], metadata={"path": "no_plan", "type": "no_plan"})
 
     # -------------------------
-    # 8) Branch: paragraph가 짧으면 short path, 아니면 long path
+    # 7) Branch: paragraph가 짧으면 short path, 아니면 long path
     # -------------------------
     whole_chain = RunnableBranch(
         (
