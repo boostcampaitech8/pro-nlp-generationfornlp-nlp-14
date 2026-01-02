@@ -11,11 +11,11 @@ from langchain_core.runnables import (
 from langchain_openai import ChatOpenAI
 from tqdm import tqdm
 
-from chains.core.conditions import is_shorter_than
-from chains.core.logging import tap
-from chains.core.selectors import constant, selector
 from chains.core.state import QuestionState
-from chains.core.utils import round_robin_merge
+from chains.runnables.conditions import is_shorter_than
+from chains.runnables.logging import tap
+from chains.runnables.selectors import constant, selector
+from chains.utils.utils import round_robin_merge
 from chains.planning import build_planner
 from chains.qa import build_qa_chain
 from chains.retrieval import build_multi_query_retriever, build_tavily_retriever

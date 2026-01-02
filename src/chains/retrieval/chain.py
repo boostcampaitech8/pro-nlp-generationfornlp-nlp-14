@@ -9,7 +9,7 @@ from langchain_core.retrievers import BaseRetriever
 from langchain_core.runnables import chain
 
 from chains.core.state import QueryResult
-from chains.core.utils import normalize_request
+from chains.utils.utils import normalize_request
 from schemas.retrieval import RetrievalPlan
 
 
