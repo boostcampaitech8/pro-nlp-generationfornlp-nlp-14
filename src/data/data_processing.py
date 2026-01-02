@@ -3,11 +3,12 @@ from ast import literal_eval
 
 import numpy as np
 import pandas as pd
-import torch
 from datasets import Dataset
 
 
 def set_seed(random_seed: int = 42):
+    import torch
+
     """난수 고정"""
     torch.manual_seed(random_seed)
     torch.cuda.manual_seed(random_seed)
