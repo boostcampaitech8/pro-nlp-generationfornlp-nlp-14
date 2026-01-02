@@ -55,41 +55,25 @@ def main(config: InferenceConfig):
     # -------------------------
     # 3) Multi-query retriever chain 생성
     # -------------------------
-    retriever_chain = build_multi_query_retriever(retriever=base_retriever)
+    multi_query_retriever = build_multi_query_retriever(retriever=base_retriever)
 
     # -------------------------
-    # 4) QA chain 생성
+    # 4) Retrieval step (planner 결과 → context)
+    # -------------------------
+    retrieval = RunnableParallel(
+        data=lambda x: x["data"],
+        context=(
+            lambda x: x["plan"]
+            | multi_query_retriever
+            | round_robin_merge
+            | (lambda docs: build_context(docs, max_chars=config.max_retrieval_context_chars))
+        ),
+    )
+
+    # -------------------------
+    # 5) QA chain 생성
     # -------------------------
     qa_chain = build_qa_chain(config=config, prompt_manager=prompt_manager)
-
-    # -------------------------
-    # 5) Retrieval step (planner 결과 → context)
-    # -------------------------
-    def retrieval_step(state: dict) -> dict:
-        """
-        RetrievalPlan을 받아 검색하고 context를 생성합니다.
-
-        Input: {"data": QuestionState, "plan": RetrievalPlan}
-        Output: {"data": QuestionState, "context": str}
-        """
-        plan: RetrievalPlan = state["plan"]
-        data: QuestionState = state["data"]
-
-        # Retriever chain 실행 → list[QueryResult]
-        query_results = retriever_chain.invoke(plan)
-
-        # QueryResult의 documents를 round-robin merge
-        docs = round_robin_merge(query_results)
-
-        # Documents → context string
-        context = build_context(docs, max_chars=config.max_retrieval_context_chars)
-
-        return {
-            "data": data,
-            "context": context,
-        }
-
-    retrieval = RunnableLambda(retrieval_step)
 
     # -------------------------
     # 6) Long path: planner → retrieval → qa
