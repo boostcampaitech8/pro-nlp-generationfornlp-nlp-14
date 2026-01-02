@@ -1,15 +1,18 @@
 import json
 import os
-import time
+
 import dotenv
-from typing import List
 from openai import OpenAI
 
 # 프로젝트 구조에 맞춘 임포트 (경로를 명확히 지정)
-from vectorstore import ESConfig
-from vectorstore import create_es_client, check_connection
-from vectorstore import WriteThroughStore
-from vectorstore import ParentDoc, ChunkDoc
+from vectorstore import (
+    ChunkDoc,
+    ESConfig,
+    ParentDoc,
+    WriteThroughStore,
+    check_connection,
+    create_es_client,
+)
 
 # 1. 환경 변수 및 설정 로드
 dotenv.load_dotenv()
@@ -24,7 +27,7 @@ DIMENSIONS = config.embedding_dims  # Solar Pro2: 4096
 
 
 # 2. 배치 임베딩 생성 함수
-def get_solar_embeddings_batch(texts: List[str]) -> List[List[float]]:
+def get_solar_embeddings_batch(texts: list[str]) -> list[list[float]]:
     if not texts:
         return []
 
@@ -43,7 +46,7 @@ def get_solar_embeddings_batch(texts: List[str]) -> List[List[float]]:
 def run_indexing_with_batch():
     # --- [A] 부모 문서 인덱싱 ---
     print("부모 문서 인덱싱 시작...")
-    with open("./data/rag_db/parent_documents.jsonl", "r", encoding="utf-8") as f:
+    with open("./data/rag_db/parent_documents.jsonl", encoding="utf-8") as f:
         parent_lines = f.readlines()
 
     for i in range(0, len(parent_lines), 20):
@@ -54,7 +57,7 @@ def run_indexing_with_batch():
         p_vecs = get_solar_embeddings_batch([d["content"] for d in batch_data])
 
         parent_docs = []
-        for d, t_vec, p_vec in zip(batch_data, t_vecs, p_vecs):
+        for d, t_vec, p_vec in zip(batch_data, t_vecs, p_vecs, strict=True):
             parent_docs.append(
                 ParentDoc(
                     doc_id=str(d["parent_id"]),
@@ -72,7 +75,7 @@ def run_indexing_with_batch():
 
     # --- [B] 자식 문서 인덱싱 ---
     print("자식 문서 인덱싱 시작...")
-    with open("./data/rag_db/child_documents.jsonl", "r", encoding="utf-8") as f:
+    with open("./data/rag_db/child_documents.jsonl", encoding="utf-8") as f:
         child_lines = f.readlines()
 
     for i in range(0, len(child_lines), 100):
@@ -82,7 +85,7 @@ def run_indexing_with_batch():
         c_vecs = get_solar_embeddings_batch([d["chunked_content"] for d in batch_data])
 
         child_docs = []
-        for d, c_vec in zip(batch_data, c_vecs):
+        for d, c_vec in zip(batch_data, c_vecs, strict=True):
             child_docs.append(
                 ChunkDoc(
                     chunk_id=d["id"],
