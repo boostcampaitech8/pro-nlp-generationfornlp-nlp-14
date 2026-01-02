@@ -65,14 +65,8 @@ def main(config: InferenceConfig):
     )
 
     # -------------------------
-    # 4) QA chain 생성
+    # 4) Context chain 생성 -> paragraph 길이에 따라 Branch
     # -------------------------
-    qa_chain = build_qa_chain(config=config, prompt_manager=prompt_manager)
-
-    # -------------------------
-    # 5) Long path: planner → retrieval → qa
-    # -------------------------
-    # Query plan 로깅
     query_plan_logger = tap(config.query_plan_log_path)
 
     def log_plan(state: dict) -> dict:
@@ -99,7 +93,12 @@ def main(config: InferenceConfig):
     )
 
     # -------------------------
-    # 7) Branch: paragraph가 짧으면 short path, 아니면 long path
+    # 5) QA chain 생성
+    # -------------------------
+    qa_chain = build_qa_chain(config=config, prompt_manager=prompt_manager)
+
+    # -------------------------
+    # 6) Whole chain 생성
     # -------------------------
     whole_chain = (
         RunnableParallel(
@@ -108,6 +107,7 @@ def main(config: InferenceConfig):
         )
         | qa_chain
     )
+
     infer_results: list[tuple[PredRow, ScoreRow]] = []
     for _, row in tqdm(test_df.iterrows(), desc="Inference"):
         # QuestionState (TypedDict) 생성
