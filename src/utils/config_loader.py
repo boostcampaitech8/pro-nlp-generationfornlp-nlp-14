@@ -93,8 +93,9 @@ class TrainConfig(BaseConfig):
 
     # 데이터 설정
     train_data: str
+    eval_data: str
     prompt_style: str
-    eval_ratio: float
+    balance_by_answer: bool
 
     # 학습 설정
     output_dir: str
@@ -121,8 +122,9 @@ class TrainConfig(BaseConfig):
         # train 섹션
         "model_name": "model_name",
         "data_train_path": "train_data",
+        "data_eval_path": "eval_data",
         "data_prompt_style": "prompt_style",
-        "data_eval_ratio": "eval_ratio",
+        "data_balance_by_answer": "balance_by_answer",
         "training_output_dir": "output_dir",
         "training_max_seq_length": "max_seq_length",
         "training_batch_size": "batch_size",

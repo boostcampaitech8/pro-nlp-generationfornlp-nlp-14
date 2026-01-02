@@ -33,6 +33,12 @@ help:
 	@echo "  make preprocess                     - 데이터 전처리 (소스 태깅 + Fold 분할)"
 	@echo "  make preprocess CONFIG=path.yaml    - 커스텀 config로 전처리"
 	@echo ""
+	@echo "  === 마이그레이션 ==="
+	@echo "  make migrate-create     - ES 인덱스 생성"
+	@echo "  make migrate-status     - ES 인덱스 상태 확인"
+	@echo "  make migrate-drop       - ES 인덱스 삭제"
+	@echo "  make migrate-recreate   - ES 인덱스 재생성"
+	@echo ""
 	@echo "  === 정리 ==="
 	@echo "  make clean       - Python 캐시 삭제"
 	@echo "  make clean-cache - 툴 캐시 삭제"
@@ -78,9 +84,30 @@ inference:
 preprocess:
 	uv run python src/data/preprocess/preprocess.py configs/preprocess.yaml
 
+# rag 데이터 청킹
+chunking:
+	uv run python src/indexing/chunking.py
+
+# rag 데이터 인덱싱
+indexing:
+	uv run python src/indexing/indexing.py $(CONFIG)
+
 # 결과 분석
 analysis:
 	uv run streamlit run src/analysis/streamlit_app.py
+
+# 마이그레이션
+migrate-create:
+	uv run python -m migrations.migrate create
+
+migrate-status:
+	uv run python -m migrations.migrate status
+
+migrate-drop:
+	uv run python -m migrations.migrate drop --confirm
+
+migrate-recreate:
+	uv run python -m migrations.migrate recreate --confirm
 
 # 정리
 clean:

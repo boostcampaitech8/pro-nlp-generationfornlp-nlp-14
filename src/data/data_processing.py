@@ -40,6 +40,106 @@ def load_and_parse_data(csv_path: str) -> pd.DataFrame:
     return pd.DataFrame(records)
 
 
+def balance_by_answer(df: pd.DataFrame, seed: int = 42) -> pd.DataFrame:
+    """정답 분포를 균일하게 맞춤 (선택지 순서 변경)
+
+    4지선다와 5지선다를 분리하여 각각 정답 분포를 균일하게 조정.
+    선택지의 순서를 변경하여 정답 번호가 균일하게 분포되도록 조정.
+    데이터 손실 없이 모든 샘플을 활용.
+
+    Args:
+        df: 원본 데이터프레임 (answer, choices 컬럼 필요)
+        seed: 랜덤 시드
+
+    Returns:
+        균형 잡힌 데이터프레임
+    """
+    random.seed(seed)
+    np.random.seed(seed)
+
+    # 선택지 개수 컬럼 추가
+    df = df.copy()
+    df["num_choices"] = df["choices"].apply(len)
+
+    print(f"[Balance] 전체 샘플 수: {len(df)}")
+
+    result_dfs = []
+
+    # 4지선다와 5지선다 분리 처리
+    for num_choices in sorted(df["num_choices"].unique()):
+        subset = df[df["num_choices"] == num_choices].copy()
+        print(f"\n[Balance] === {num_choices}지선다 ({len(subset)}개) ===")
+
+        # 원본 정답 분포 확인
+        original_counts = subset["answer"].value_counts().sort_index()
+        print(f"[Balance] 원본 정답 분포: {original_counts.to_dict()}")
+
+        # 해당 선택지 개수에 맞는 정답 범위 (1 ~ num_choices)
+        valid_answers = list(range(1, num_choices + 1))
+        target_count = len(subset) // num_choices
+
+        print(f"[Balance] 목표 분포: 각 정답당 약 {target_count}개")
+
+        # 결과 저장
+        result_records = []
+
+        # 현재 각 정답별 할당된 개수 추적
+        answer_allocated = {ans: 0 for ans in valid_answers}
+
+        # 데이터 셔플 (순서에 따른 편향 방지)
+        subset_shuffled = subset.sample(frac=1, random_state=seed).reset_index(drop=True)
+
+        for _, row in subset_shuffled.iterrows():
+            choices = row["choices"]
+            original_answer = row["answer"]
+
+            # 목표 정답 결정 (가장 부족한 정답 번호로)
+            target_answer = min(valid_answers, key=lambda x: answer_allocated.get(x, 0))
+
+            if target_answer == original_answer:
+                # 순서 변경 불필요
+                new_choices = choices
+                new_answer = original_answer
+            else:
+                # 선택지 순서 변경하여 정답 위치 조정
+                correct_choice = choices[original_answer - 1]  # 1-indexed
+
+                # 새 선택지 리스트 생성
+                new_choices = choices.copy()
+                new_choices.pop(original_answer - 1)
+                new_choices.insert(target_answer - 1, correct_choice)
+                new_answer = target_answer
+
+            # 레코드 생성
+            new_record = row.to_dict()
+            new_record["choices"] = new_choices
+            new_record["answer"] = new_answer
+            result_records.append(new_record)
+
+            answer_allocated[new_answer] = answer_allocated.get(new_answer, 0) + 1
+
+        subset_result = pd.DataFrame(result_records)
+
+        # 결과 분포 출력
+        final_counts = subset_result["answer"].value_counts().sort_index()
+        print(f"[Balance] 균형 후 정답 분포: {final_counts.to_dict()}")
+
+        result_dfs.append(subset_result)
+
+    # 모든 결과 합치기
+    result_df = pd.concat(result_dfs, ignore_index=True)
+
+    # num_choices 컬럼 제거
+    result_df = result_df.drop(columns=["num_choices"])
+
+    # 최종 셔플
+    result_df = result_df.sample(frac=1, random_state=seed).reset_index(drop=True)
+
+    print(f"\n[Balance] 최종 총 샘플 수: {len(result_df)} (변경 없음)")
+
+    return result_df
+
+
 def create_prompt_messages(df: pd.DataFrame, prompt_manager) -> list[dict]:
     """프롬프트 메시지 생성"""
     dataset = Dataset.from_pandas(df)
@@ -92,10 +192,8 @@ def tokenize_dataset(
     processed_dataset: list[dict],
     tokenizer,
     max_seq_length: int = 1024,
-    test_size: float = 0.1,
-    seed: int = 42,
 ):
-    """토큰화 및 train/eval 분리"""
+    """토큰화"""
 
     def formatting_prompts_func(example):
         output_texts = []
@@ -132,6 +230,5 @@ def tokenize_dataset(
     )
 
     tokenized_dataset = tokenized_dataset.filter(lambda x: len(x["input_ids"]) <= max_seq_length)
-    tokenized_dataset = tokenized_dataset.train_test_split(test_size=test_size, seed=seed)
 
-    return tokenized_dataset["train"], tokenized_dataset["test"]
+    return tokenized_dataset

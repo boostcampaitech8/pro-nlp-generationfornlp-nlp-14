@@ -8,6 +8,7 @@ from peft import LoraConfig, get_peft_model
 from trl import SFTConfig, SFTTrainer
 
 from data.data_processing import (
+    balance_by_answer,
     create_prompt_messages,
     load_and_parse_data,
     set_seed,
@@ -104,15 +105,24 @@ def main(config: TrainConfig):
     model, tokenizer = load_model(config)
 
     # 데이터 로드 및 전처리
-    df = load_and_parse_data(config.train_data)
+    train_df = load_and_parse_data(config.train_data)
+    if config.balance_by_answer:
+        train_df = balance_by_answer(train_df)
     prompt_manager = get_prompt_manager(config.prompt_style)
-    processed_dataset = create_prompt_messages(df, prompt_manager)
-    train_dataset, eval_dataset = tokenize_dataset(
+    processed_dataset = create_prompt_messages(train_df, prompt_manager)
+    train_dataset = tokenize_dataset(
         processed_dataset,
         tokenizer,
         max_seq_length=config.max_seq_length,
-        test_size=config.eval_ratio,
-        seed=config.seed,
+    )
+
+    # eval 데이터 로드
+    eval_df = load_and_parse_data(config.eval_data)
+    eval_processed = create_prompt_messages(eval_df, prompt_manager)
+    eval_dataset = tokenize_dataset(
+        eval_processed,
+        tokenizer,
+        max_seq_length=config.max_seq_length,
     )
 
     # Data Collator 설정

@@ -17,6 +17,8 @@ dependencies = [
     "datasets==4.3.0",
     "langchain-openai==1.1.6",
     "tavily-python>=0.7.17",
+    "langchain-text-splitters>=1.1.0",
+    "elasticsearch==8.19.3",
 ]
 
 [tool.setuptools.packages.find]
@@ -75,4 +77,7 @@ notebook = [
     "sentence-transformers==5.2.0",
     "kiwipiepy==0.22.2",
     "kiwipiepy-model==0.22.1",
+]
+crawling = [
+    "selenium>=4.39.0",
 ]

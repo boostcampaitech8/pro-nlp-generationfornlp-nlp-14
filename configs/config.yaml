@@ -8,9 +8,10 @@ train:
 
   # 데이터 설정
   data:
-    train_path: "data/train.csv"
+    train_path: "data/fold/train_split.csv"
+    eval_path: "data/fold/eval_split.csv"
     prompt_style: "v1"
-    eval_ratio: 0.1
+    balance_by_answer: true
 
   # 학습 하이퍼파라미터
   training:
