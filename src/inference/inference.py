@@ -12,7 +12,9 @@ from langchain_core.runnables import (
 from langchain_openai import ChatOpenAI
 from tqdm import tqdm
 
+from chains.core.conditions import is_shorter_than
 from chains.core.logging import tap
+from chains.core.selectors import constant, selector
 from chains.core.state import QuestionState
 from chains.core.utils import round_robin_merge
 from chains.planning import build_planner
@@ -55,9 +57,9 @@ def main(config: InferenceConfig):
     # 3) retriever chain 생성
     # -------------------------
     retrieval_chain = RunnableParallel(
-        data=lambda x: x["data"],
+        data=selector("data"),
         context=(
-            lambda x: x["plan"]
+            selector("plan")
             | build_multi_query_retriever(retriever=base_retriever)
             | round_robin_merge
             | (lambda docs: build_context(docs, max_chars=config.max_retrieval_context_chars))
@@ -81,15 +83,16 @@ def main(config: InferenceConfig):
 
     context_chain = RunnableBranch(
         (
-            lambda x: len((x["paragraph"] or "").strip())
-            < config.max_paragraph_chars_for_planner,  # paragraph가 짧으면
+            is_shorter_than(
+                "paragraph", max_chars=config.max_paragraph_chars_for_planner
+            ),  # paragraph가 짧으면
             (
                 RunnableParallel(data=RunnablePassthrough(), plan=planner)
                 | RunnableLambda(log_plan)
                 | retrieval_chain
             ),  # retrieval 실행
         ),
-        lambda _: "",  # paragraph가 길면 빈 context
+        constant(""),  # paragraph가 길면 빈 context
     )
 
     # -------------------------

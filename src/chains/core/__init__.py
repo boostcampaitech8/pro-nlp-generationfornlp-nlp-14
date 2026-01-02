@@ -1,4 +1,6 @@
+from chains.core.conditions import is_shorter_than
 from chains.core.logging import tap
+from chains.core.selectors import constant, selector
 from chains.core.state import (
     DecodedState,
     ForwardState,
@@ -26,4 +28,9 @@ __all__ = [
     "round_robin_merge",
     # Logging
     "tap",
+    # Selectors
+    "selector",
+    "constant",
+    # Conditions
+    "is_shorter_than",
 ]
