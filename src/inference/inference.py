@@ -12,14 +12,14 @@ from langchain_openai import ChatOpenAI
 from tqdm import tqdm
 
 from chains.core.state import QuestionState
-from chains.runnables.conditions import is_shorter_than
-from chains.runnables.logging import tap
-from chains.runnables.selectors import constant, selector
-from chains.utils.utils import round_robin_merge
 from chains.planning import build_planner
 from chains.qa import build_qa_chain
 from chains.retrieval import build_multi_query_retriever, build_tavily_retriever
 from chains.retrieval.context_builder import build_context
+from chains.runnables.conditions import is_shorter_than
+from chains.runnables.logging import tap
+from chains.runnables.selectors import constant, selector
+from chains.utils.utils import round_robin_merge
 from data.data_processing import load_and_parse_data
 from prompts import get_prompt_manager
 from prompts.plan.plan import plan_prompt
