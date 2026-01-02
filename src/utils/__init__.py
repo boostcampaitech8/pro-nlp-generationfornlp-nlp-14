@@ -9,6 +9,8 @@
 """
 
 # Config 로더 및 설정 클래스
+# 선택지 토큰 유틸 (torch 불필요)
+from utils.choice_utils import get_choice_token_ids
 from utils.config_loader import (
     InferenceConfig,
     TrainConfig,
@@ -16,14 +18,6 @@ from utils.config_loader import (
 
 # 상수
 from utils.constants import CHOICE_TOKENS, INT_TO_STR_MAP, STR_TO_INT_MAP
-
-# 예측 관련 함수
-from utils.prediction import (
-    decode_labels,
-    extract_choice_logits,
-    get_choice_token_ids,
-    logits_to_prediction,
-)
 
 # 프롬프트 템플릿
 from utils.prompts import CHAT_TEMPLATE
@@ -36,8 +30,9 @@ __all__ = [
     # Config 클래스
     "TrainConfig",
     "InferenceConfig",
-    # 예측 함수
+    # 선택지 토큰 유틸 (torch 불필요)
     "get_choice_token_ids",
+    # 예측 함수 (lazy import, torch 필요)
     "extract_choice_logits",
     "logits_to_prediction",
     "decode_labels",
@@ -47,13 +42,18 @@ __all__ = [
     "setup_wandb",
 ]
 
+# torch 의존성이 있는 함수들 (lazy import)
+_PREDICTION_FUNCS = {"extract_choice_logits", "logits_to_prediction", "decode_labels"}
+
 
 def __getattr__(name):
-    """
-    setup_wandb는 학습 시에만 필요하므로 실제 사용 시점에 Lazy import.
-    """
+    """torch 의존성 함수들은 실제 사용 시점에 lazy import."""
     if name == "setup_wandb":
         from utils.wandb_setup import setup_wandb
 
         return setup_wandb
+    if name in _PREDICTION_FUNCS:
+        from utils import prediction
+
+        return getattr(prediction, name)
     raise AttributeError(f"module 'utils' has no attribute '{name}'")

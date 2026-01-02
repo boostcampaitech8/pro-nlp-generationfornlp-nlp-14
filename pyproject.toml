@@ -14,7 +14,6 @@ dependencies = [
     "pandas==2.3.3",
     "tqdm==4.67.1",
     "streamlit==1.52.2",
-    "torch==2.9.1",
     "datasets==4.3.0",
     "langchain-openai==1.1.6",
     "tavily-python>=0.7.17",
@@ -56,6 +55,7 @@ dev = [
     "types-pyyaml>=6.0.12.20250915",
 ]
 train = [
+    "torch==2.9.1",
     "bitsandbytes>=0.49.0",
     "evaluate==0.4.3",
     "peft==0.18.0",

@@ -1,6 +1,6 @@
 from langchain_core.runnables import chain
 
-from utils.prediction import get_choice_token_ids
+from utils.choice_utils import get_choice_token_ids
 
 
 def build_local_forward(config):
