@@ -1,14 +1,10 @@
-"""예측 관련 유틸리티 모듈"""
+"""예측 관련 유틸리티 모듈 (torch 의존성 있음)"""
 
 import numpy as np
 import torch
 
-from utils.constants import CHOICE_TOKENS, INT_TO_STR_MAP, STR_TO_INT_MAP
-
-
-def get_choice_token_ids(tokenizer, num_choices: int = 5) -> list[int]:
-    """토크나이저에서 선택지 토큰 ID 추출"""
-    return [tokenizer.vocab[token] for token in CHOICE_TOKENS[:num_choices]]
+from utils.choice_utils import get_choice_token_ids
+from utils.constants import INT_TO_STR_MAP, STR_TO_INT_MAP
 
 
 def extract_choice_logits(logits: torch.Tensor, tokenizer, position: int = -1) -> torch.Tensor:

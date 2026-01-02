@@ -1,10 +1,9 @@
 from dataclasses import dataclass
-from typing import Literal
+from typing import Any
 
 
 @dataclass
 class RetrievalResponse:
-    type: Literal["web", "local"]
     question: str
     context: str
-    sources: list[str] | None = None  # optional but very useful
+    metadata: dict[str, Any] | None = None
