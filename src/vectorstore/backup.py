@@ -31,10 +31,10 @@ logger = logging.getLogger(__name__)
 
 
 class LocalBackupManager:
-    """로컬 JSON 백업 파일 관리."""
+    """로컬 JSONL 백업 파일 관리 (append-only)."""
 
-    PARENTS_FILE = "parents_backup.json"
-    CHUNKS_FILE = "chunks_backup.json"
+    PARENTS_FILE = "parents_backup.jsonl"
+    CHUNKS_FILE = "chunks_backup.jsonl"
     METADATA_FILE = "backup_metadata.json"
 
     def __init__(self, backup_dir: Path):
@@ -45,66 +45,76 @@ class LocalBackupManager:
         """백업 디렉토리 생성."""
         self.backup_dir.mkdir(parents=True, exist_ok=True)
 
-    def _load_json(self, filename: str) -> dict[str, Any]:
-        """JSON 파일 로드. 없으면 빈 딕셔너리 반환."""
+    def _append_jsonl(self, filename: str, records: list[dict[str, Any]]) -> None:
+        """JSONL 파일에 레코드 추가 (append)."""
+        if not records:
+            return
+        path = self.backup_dir / filename
+        with path.open("a", encoding="utf-8") as f:
+            for record in records:
+                f.write(json.dumps(record, ensure_ascii=False) + "\n")
+
+    def _load_jsonl(self, filename: str, key_field: str) -> dict[str, dict[str, Any]]:
+        """JSONL 파일 로드. 중복 키는 마지막 값으로 덮어씀."""
         path = self.backup_dir / filename
         if not path.exists():
             return {}
+        result: dict[str, dict[str, Any]] = {}
         try:
             with path.open("r", encoding="utf-8") as f:
-                data = json.load(f)
-                return dict(data) if isinstance(data, dict) else {}
-        except (json.JSONDecodeError, OSError) as e:
+                for line in f:
+                    line = line.strip()
+                    if not line:
+                        continue
+                    try:
+                        record = json.loads(line)
+                        key = record.get(key_field)
+                        if key:
+                            result[key] = record
+                    except json.JSONDecodeError:
+                        continue
+        except OSError as e:
             logger.warning(f"백업 파일 로드 실패 ({path}): {e}")
-            return {}
-
-    def _save_json(self, filename: str, data: dict[str, Any]) -> None:
-        """JSON 파일 저장."""
-        path = self.backup_dir / filename
-        with path.open("w", encoding="utf-8") as f:
-            json.dump(data, f, ensure_ascii=False, indent=2)
+        return result
 
     def _update_metadata(self) -> None:
-        """메타데이터 갱신."""
-        parents = self._load_json(self.PARENTS_FILE)
-        chunks = self._load_json(self.CHUNKS_FILE)
+        """메타데이터 갱신 (라인 수 기반)."""
+
+        def count_lines(filename: str) -> int:
+            path = self.backup_dir / filename
+            if not path.exists():
+                return 0
+            with path.open("r", encoding="utf-8") as f:
+                return sum(1 for line in f if line.strip())
+
         metadata = {
             "last_updated": datetime.now(timezone.utc).isoformat(),
-            "total_parents": len(parents),
-            "total_chunks": len(chunks),
+            "total_parents": count_lines(self.PARENTS_FILE),
+            "total_chunks": count_lines(self.CHUNKS_FILE),
         }
-        self._save_json(self.METADATA_FILE, metadata)
+        path = self.backup_dir / self.METADATA_FILE
+        with path.open("w", encoding="utf-8") as f:
+            json.dump(metadata, f, ensure_ascii=False, indent=2)
 
     # =========================================================================
     # Parents
     # =========================================================================
 
     def save_parent(self, doc: ParentDoc) -> None:
-        """Parent 문서를 로컬에 저장."""
-        data = self._load_json(self.PARENTS_FILE)
-        data[doc.doc_id] = doc.to_es()
-        self._save_json(self.PARENTS_FILE, data)
-        self._update_metadata()
+        """Parent 문서를 로컬에 저장 (append)."""
+        self._append_jsonl(self.PARENTS_FILE, [doc.to_es()])
 
     def save_parents(self, docs: list[ParentDoc]) -> None:
-        """여러 Parent 문서를 로컬에 저장."""
-        data = self._load_json(self.PARENTS_FILE)
-        for doc in docs:
-            data[doc.doc_id] = doc.to_es()
-        self._save_json(self.PARENTS_FILE, data)
-        self._update_metadata()
+        """여러 Parent 문서를 로컬에 저장 (append)."""
+        self._append_jsonl(self.PARENTS_FILE, [doc.to_es() for doc in docs])
 
     def delete_parent(self, doc_id: str) -> None:
-        """Parent 문서를 로컬에서 삭제."""
-        data = self._load_json(self.PARENTS_FILE)
-        if doc_id in data:
-            del data[doc_id]
-            self._save_json(self.PARENTS_FILE, data)
-            self._update_metadata()
+        """Parent 삭제 마커 추가."""
+        self._append_jsonl(self.PARENTS_FILE, [{"doc_id": doc_id, "_deleted": True}])
 
     def load_all_parents(self) -> list[ParentDoc]:
-        """모든 Parent 문서 로드."""
-        data = self._load_json(self.PARENTS_FILE)
+        """모든 Parent 문서 로드 (중복 제거)."""
+        data = self._load_jsonl(self.PARENTS_FILE, "doc_id")
         return [
             ParentDoc(
                 doc_id=v["doc_id"],
@@ -113,10 +123,11 @@ class LocalBackupManager:
                 parent_text=v["parent_text"],
                 version=v.get("version", "v1"),
                 created_at=v.get("created_at"),
-                topic_vector=v.get("topic_vector"),
-                parent_vector=v.get("parent_vector"),
+                topic_vector=v.get("topic_vector") or [],
+                parent_vector=v.get("parent_vector") or [],
             )
             for v in data.values()
+            if not v.get("_deleted") and "subject" in v
         ]
 
     # =========================================================================
@@ -124,42 +135,25 @@ class LocalBackupManager:
     # =========================================================================
 
     def save_chunk(self, doc: ChunkDoc) -> None:
-        """Chunk 문서를 로컬에 저장."""
-        data = self._load_json(self.CHUNKS_FILE)
-        data[doc.chunk_id] = doc.to_es()
-        self._save_json(self.CHUNKS_FILE, data)
-        self._update_metadata()
+        """Chunk 문서를 로컬에 저장 (append)."""
+        self._append_jsonl(self.CHUNKS_FILE, [doc.to_es()])
 
     def save_chunks(self, docs: list[ChunkDoc]) -> None:
-        """여러 Chunk 문서를 로컬에 저장."""
-        data = self._load_json(self.CHUNKS_FILE)
-        for doc in docs:
-            data[doc.chunk_id] = doc.to_es()
-        self._save_json(self.CHUNKS_FILE, data)
-        self._update_metadata()
+        """여러 Chunk 문서를 로컬에 저장 (append)."""
+        self._append_jsonl(self.CHUNKS_FILE, [doc.to_es() for doc in docs])
 
     def delete_chunk(self, chunk_id: str) -> None:
-        """Chunk 문서를 로컬에서 삭제."""
-        data = self._load_json(self.CHUNKS_FILE)
-        if chunk_id in data:
-            del data[chunk_id]
-            self._save_json(self.CHUNKS_FILE, data)
-            self._update_metadata()
+        """Chunk 삭제 마커 추가."""
+        self._append_jsonl(self.CHUNKS_FILE, [{"chunk_id": chunk_id, "_deleted": True}])
 
     def delete_chunks_by_doc_id(self, doc_id: str) -> int:
-        """특정 Parent의 모든 Chunk를 로컬에서 삭제."""
-        data = self._load_json(self.CHUNKS_FILE)
-        to_delete = [k for k, v in data.items() if v.get("doc_id") == doc_id]
-        for k in to_delete:
-            del data[k]
-        if to_delete:
-            self._save_json(self.CHUNKS_FILE, data)
-            self._update_metadata()
-        return len(to_delete)
+        """특정 Parent의 모든 Chunk 삭제 마커 추가."""
+        self._append_jsonl(self.CHUNKS_FILE, [{"doc_id": doc_id, "_deleted_by_parent": True}])
+        return 0
 
     def load_all_chunks(self) -> list[ChunkDoc]:
-        """모든 Chunk 문서 로드."""
-        data = self._load_json(self.CHUNKS_FILE)
+        """모든 Chunk 문서 로드 (중복 제거)."""
+        data = self._load_jsonl(self.CHUNKS_FILE, "chunk_id")
         return [
             ChunkDoc(
                 chunk_id=v["chunk_id"],
@@ -175,6 +169,7 @@ class LocalBackupManager:
                 created_at=v.get("created_at"),
             )
             for v in data.values()
+            if not v.get("_deleted") and "subject" in v
         ]
 
     # =========================================================================
@@ -183,7 +178,15 @@ class LocalBackupManager:
 
     def get_metadata(self) -> dict[str, Any]:
         """백업 메타데이터 조회."""
-        return self._load_json(self.METADATA_FILE)
+        path = self.backup_dir / self.METADATA_FILE
+        if not path.exists():
+            return {}
+        try:
+            with path.open("r", encoding="utf-8") as f:
+                data = json.load(f)
+                return dict(data) if isinstance(data, dict) else {}
+        except (json.JSONDecodeError, OSError):
+            return {}
 
     def clear_all(self) -> None:
         """모든 로컬 백업 삭제."""
@@ -294,8 +297,7 @@ class WriteThroughStore:
 class VectorStoreBackup:
     """벡터스토어 전체 백업/복구 유틸리티.
 
-    ES의 모든 데이터를 단일 JSON 파일로 백업/복구합니다.
-    WriteThroughStore의 점진적 백업과 달리, 전체 스냅샷 용도입니다.
+    ES의 모든 데이터를 JSONL 파일로 스트리밍 백업/복구합니다.
     """
 
     def __init__(self, es: Elasticsearch, cfg: ESConfig):
@@ -304,101 +306,136 @@ class VectorStoreBackup:
         self.parent_repo = ParentRepository(es, cfg)
         self.chunk_repo = ChunkRepository(es, cfg)
 
-    def backup_to_json(self, backup_path: str | Path) -> int:
-        """ES 데이터를 단일 JSON 파일로 백업.
+    def backup_to_jsonl(self, output_dir: str | Path) -> tuple[int, int]:
+        """ES 데이터를 JSONL 형식으로 스트리밍 백업.
 
         Args:
-            backup_path: 백업 파일 경로
+            output_dir: 백업 디렉토리 경로
 
         Returns:
-            백업된 총 문서 수
+            (parents_count, chunks_count) 백업된 문서 수
         """
-        backup_path = Path(backup_path)
+        output_dir = Path(output_dir)
+        output_dir.mkdir(parents=True, exist_ok=True)
 
-        # 모든 문서 수집
-        parents = list(self.parent_repo.scroll_all())
-        chunks = list(self.chunk_repo.scroll_all())
+        parents_file = output_dir / "parents.jsonl"
+        chunks_file = output_dir / "chunks.jsonl"
+        metadata_file = output_dir / "metadata.json"
 
-        backup_data = {
-            "metadata": {
-                "created_at": datetime.now(timezone.utc).isoformat(),
-                "total_parents": len(parents),
-                "total_chunks": len(chunks),
-                "embedding_dims": self.cfg.embedding_dims,
-                "parents_index": self.cfg.parents_index,
-                "chunks_index": self.cfg.chunks_index,
-            },
-            "parents": [p.to_es() for p in parents],
-            "chunks": [c.to_es() for c in chunks],
+        # Parents 스트리밍 저장
+        parents_count = 0
+        with parents_file.open("w", encoding="utf-8") as f:
+            for doc in self.parent_repo.scroll_all():
+                f.write(json.dumps(doc.to_es(), ensure_ascii=False) + "\n")
+                parents_count += 1
+
+        # Chunks 스트리밍 저장
+        chunks_count = 0
+        with chunks_file.open("w", encoding="utf-8") as f:
+            for chunk_doc in self.chunk_repo.scroll_all():
+                f.write(json.dumps(chunk_doc.to_es(), ensure_ascii=False) + "\n")
+                chunks_count += 1
+
+        # 메타데이터 저장
+        metadata = {
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "total_parents": parents_count,
+            "total_chunks": chunks_count,
+            "embedding_dims": self.cfg.embedding_dims,
+            "parents_index": self.cfg.parents_index,
+            "chunks_index": self.cfg.chunks_index,
         }
+        with metadata_file.open("w", encoding="utf-8") as f:
+            json.dump(metadata, f, ensure_ascii=False, indent=2)
 
-        backup_path.parent.mkdir(parents=True, exist_ok=True)
-        with backup_path.open("w", encoding="utf-8") as f:
-            json.dump(backup_data, f, ensure_ascii=False, indent=2)
+        return parents_count, chunks_count
 
-        return len(parents) + len(chunks)
-
-    def restore_from_json(self, backup_path: str | Path, refresh: bool = True) -> tuple[int, int]:
-        """JSON 파일에서 ES로 복구.
+    def restore_from_jsonl(self, backup_dir: str | Path, refresh: bool = True) -> tuple[int, int]:
+        """JSONL 백업에서 ES로 복구.
 
         Args:
-            backup_path: 백업 파일 경로
+            backup_dir: 백업 디렉토리 경로
             refresh: 복구 후 인덱스 refresh 여부
 
         Returns:
             (parents_count, chunks_count) 복구된 문서 수
         """
-        backup_path = Path(backup_path)
-
-        with backup_path.open("r", encoding="utf-8") as f:
-            backup_data = json.load(f)
+        backup_dir = Path(backup_dir)
+        parents_file = backup_dir / "parents.jsonl"
+        chunks_file = backup_dir / "chunks.jsonl"
 
         # Parents 복구
-        parent_docs = [
-            ParentDoc(
-                doc_id=p["doc_id"],
-                subject=p["subject"],
-                topic=p["topic"],
-                parent_text=p["parent_text"],
-                version=p.get("version", "v1"),
-                created_at=p.get("created_at"),
-                topic_vector=p.get("topic_vector"),
-                parent_vector=p.get("parent_vector"),
-            )
-            for p in backup_data["parents"]
-        ]
-        parents_count = self.parent_repo.bulk_upsert(parent_docs, refresh=False)
+        parents_count = 0
+        if parents_file.exists():
+            batch: list[ParentDoc] = []
+            with parents_file.open("r", encoding="utf-8") as f:
+                for line in f:
+                    line = line.strip()
+                    if not line:
+                        continue
+                    p = json.loads(line)
+                    batch.append(
+                        ParentDoc(
+                            doc_id=p["doc_id"],
+                            subject=p["subject"],
+                            topic=p["topic"],
+                            parent_text=p["parent_text"],
+                            version=p.get("version", "v1"),
+                            created_at=p.get("created_at"),
+                            topic_vector=p.get("topic_vector"),
+                            parent_vector=p.get("parent_vector"),
+                        )
+                    )
+                    if len(batch) >= 100:
+                        self.parent_repo.bulk_upsert(batch, refresh=False)
+                        parents_count += len(batch)
+                        batch = []
+            if batch:
+                self.parent_repo.bulk_upsert(batch, refresh=False)
+                parents_count += len(batch)
 
         # Chunks 복구
-        chunk_docs = [
-            ChunkDoc(
-                chunk_id=c["chunk_id"],
-                doc_id=c["doc_id"],
-                subject=c["subject"],
-                topic=c["topic"],
-                chunk_idx=c["chunk_idx"],
-                chunk_text=c["chunk_text"],
-                chunk_vector=c["chunk_vector"],
-                start_char=c.get("start_char"),
-                end_char=c.get("end_char"),
-                version=c.get("version", "v1"),
-                created_at=c.get("created_at"),
-            )
-            for c in backup_data["chunks"]
-        ]
-        chunks_count = self.chunk_repo.bulk_upsert(chunk_docs, refresh=refresh)
+        chunks_count = 0
+        if chunks_file.exists():
+            batch_chunks: list[ChunkDoc] = []
+            with chunks_file.open("r", encoding="utf-8") as f:
+                for line in f:
+                    line = line.strip()
+                    if not line:
+                        continue
+                    c = json.loads(line)
+                    batch_chunks.append(
+                        ChunkDoc(
+                            chunk_id=c["chunk_id"],
+                            doc_id=c["doc_id"],
+                            subject=c["subject"],
+                            topic=c["topic"],
+                            chunk_idx=c["chunk_idx"],
+                            chunk_text=c["chunk_text"],
+                            chunk_vector=c["chunk_vector"],
+                            start_char=c.get("start_char"),
+                            end_char=c.get("end_char"),
+                            version=c.get("version", "v1"),
+                            created_at=c.get("created_at"),
+                        )
+                    )
+                    if len(batch_chunks) >= 100:
+                        self.chunk_repo.bulk_upsert(batch_chunks, refresh=False)
+                        chunks_count += len(batch_chunks)
+                        batch_chunks = []
+            if batch_chunks:
+                self.chunk_repo.bulk_upsert(batch_chunks, refresh=refresh)
+                chunks_count += len(batch_chunks)
 
         return parents_count, chunks_count
 
-    def get_backup_info(self, backup_path: str | Path) -> dict[str, Any]:
-        """백업 파일 정보 조회."""
-        backup_path = Path(backup_path)
+    def get_backup_info(self, backup_dir: str | Path) -> dict[str, Any]:
+        """백업 디렉토리 메타데이터 조회."""
+        metadata_file = Path(backup_dir) / "metadata.json"
 
-        if not backup_path.exists():
-            raise FileNotFoundError(f"백업 파일이 없습니다: {backup_path}")
+        if not metadata_file.exists():
+            raise FileNotFoundError(f"메타데이터 파일이 없습니다: {metadata_file}")
 
-        with backup_path.open("r", encoding="utf-8") as f:
-            backup_data = json.load(f)
-
-        metadata = backup_data.get("metadata", {})
-        return dict(metadata) if isinstance(metadata, dict) else {}
+        with metadata_file.open("r", encoding="utf-8") as f:
+            data = json.load(f)
+            return dict(data) if isinstance(data, dict) else {}
