@@ -34,3 +34,48 @@ def is_shorter_than(*keys, max_chars: int):
         return len((value or "").strip()) < max_chars
 
     return _check
+
+
+def all_conditions(*conditions):
+    """
+    여러 Runnable 조건을 AND로 조합하는 팩토리 함수.
+
+    Args:
+        *conditions: 조합할 Runnable 조건들
+
+    Returns:
+        Chain function that returns bool (invoke/ainvoke 모두 지원)
+
+    Example:
+        >>> all_conditions(
+        ...     is_shorter_than("data", "paragraph", max_chars=100),
+        ...     is_enabled("use_rag")
+        ... )
+    """
+
+    @chain
+    def _check_all(state) -> bool:
+        return all(condition.invoke(state) for condition in conditions)
+
+    return _check_all
+
+
+def constant_check(value: bool):
+    """
+    상수 값을 반환하는 조건 팩토리 함수.
+
+    Args:
+        value: 반환할 bool 값
+
+    Returns:
+        Chain function that returns the constant value
+
+    Example:
+        >>> constant_check(config.use_rag)
+    """
+
+    @chain
+    def _check(_state) -> bool:
+        return value
+
+    return _check

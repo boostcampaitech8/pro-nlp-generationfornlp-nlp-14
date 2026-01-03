@@ -14,7 +14,7 @@ from chains.planning import build_planner
 from chains.qa import build_qa_chain
 from chains.retrieval import build_multi_query_retriever, build_tavily_retriever
 from chains.retrieval.context_builder import build_context
-from chains.runnables.conditions import is_shorter_than
+from chains.runnables.conditions import all_conditions, constant_check, is_shorter_than
 from chains.runnables.logging import tap
 from chains.runnables.selectors import constant, selector
 from chains.utils.utils import round_robin_merge
@@ -62,10 +62,12 @@ def main(config: InferenceConfig):
     augmentation_chain = RunnablePassthrough.assign(
         context=RunnableBranch(
             (
-                lambda x: is_shorter_than(
-                    "data", "paragraph", max_chars=config.max_paragraph_chars_for_planner
-                ).invoke(x)
-                and config.use_rag,  # paragraph가 짧고 RAG 사용 시에만 planner + retrieval 실행
+                all_conditions(
+                    is_shorter_than(
+                        "data", "paragraph", max_chars=config.max_paragraph_chars_for_planner
+                    ),
+                    constant_check(config.use_rag),
+                ),  # paragraph가 짧고 RAG 사용 시에만 planner + retrieval 실행
                 selector("data")
                 | RunnablePassthrough.assign(plan=planner)
                 | plan_logger  # plan 로그 저장
