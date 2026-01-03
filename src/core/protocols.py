@@ -1,7 +1,7 @@
 """검색 관련 Protocol(인터페이스) 정의.
 
-이 모듈은 Elasticsearch나 다른 인프라에 의존하지 않습니다.
-상위 레이어에서 자유롭게 import할 수 있습니다.
+이 모듈은 인프라에 의존하지 않습니다.
+vectorstore, chains, indexing 등 어디서든 import할 수 있습니다.
 
 Protocol은 구조적 서브타이핑(Structural Subtyping)을 지원합니다.
 구현체가 이 Protocol을 상속하지 않아도, 시그니처만 맞으면 호환됩니다.
@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from typing import Any, Protocol
 
-from vectorstore.search.types import SearchHit, SearchParams
+from core.types import SearchHit, SearchParams
 
 
 class SearcherProtocol(Protocol):

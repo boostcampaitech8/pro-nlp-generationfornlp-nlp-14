@@ -1,7 +1,7 @@
 """검색 관련 공용 타입 정의.
 
-이 모듈은 Elasticsearch나 다른 인프라에 의존하지 않습니다.
-상위 레이어에서 자유롭게 import할 수 있습니다.
+이 모듈은 인프라에 의존하지 않습니다.
+vectorstore, chains, indexing 등 어디서든 import할 수 있습니다.
 """
 
 from __future__ import annotations
