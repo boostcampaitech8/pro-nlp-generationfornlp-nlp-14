@@ -22,7 +22,7 @@ train:
     learning_rate: 2.0e-5
     weight_decay: 0.01
     logging_steps: 1
-    logging_strategy: "epoch"  # "steps", "epoch", "no"
+    logging_strategy: "epoch" # "steps", "epoch", "no"
     seed: 42
 
   # LoRA 설정
@@ -38,7 +38,7 @@ train:
 inference:
   # 모델 설정
   model:
-    checkpoint_path: "unsloth/Qwen2.5-32B-Instruct-bnb-4bit"   #실제 경로 or Hugging Face 모델명
+    checkpoint_path: "unsloth/Qwen2.5-32B-Instruct-bnb-4bit" #실제 경로 or Hugging Face 모델명
 
   # 데이터 설정
   data:
@@ -56,15 +56,18 @@ inference:
   output:
     path: "outputs/output.csv"
 
+  # RAG 설정
+  use_rag: True
+
   # Pipeline 설정
   pipeline:
-    max_retrieval_context_chars: 4000  # 검색된 문서들을 결합한 컨텍스트의 최대 문자 수
-    max_paragraph_chars_for_planner: 600  # Planner 사용 최대 paragraph 길이 (이하일 때만 planning 수행)
-    query_plan_log_path: "log/query_decompositions.jsonl"  # Query plan 로그 경로
+    max_retrieval_context_chars: 4000 # 검색된 문서들을 결합한 컨텍스트의 최대 문자 수
+    max_paragraph_chars_for_planner: 600 # Planner 사용 최대 paragraph 길이 (이하일 때만 planning 수행)
+    query_plan_log_path: "log/query_decompositions.jsonl" # Query plan 로그 경로
 
   # Planner LLM 설정
   planner_llm:
-    temperature: 1.0  # 생성 다양성
+    temperature: 1.0 # 생성 다양성
 
 # -------------------------------------------- #
 #                   wandb 설정                  #

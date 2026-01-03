@@ -81,8 +81,8 @@ def main(config: InferenceConfig):
 
     context_chain = RunnableBranch(
         (
-            lambda x: len((x["paragraph"] or "").strip())
-            < config.max_paragraph_chars_for_planner,  # paragraph가 짧으면
+            lambda x: len((x["paragraph"] or "").strip()) < config.max_paragraph_chars_for_planner
+            and config.use_rag,  # paragraph가 짧고 RAG 사용 시에만 planner + retrieval 실행
             (
                 RunnableParallel(data=RunnablePassthrough(), plan=planner)
                 | RunnableLambda(log_plan)
