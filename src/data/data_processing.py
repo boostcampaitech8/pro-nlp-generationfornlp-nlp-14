@@ -191,6 +191,7 @@ def create_test_prompt_messages(df: pd.DataFrame, prompt_manager) -> list[dict]:
 def tokenize_dataset(
     processed_dataset: list[dict],
     tokenizer,
+    enable_thinking: bool,
     max_seq_length: int = 1024,
 ):
     """토큰화"""
@@ -202,6 +203,7 @@ def tokenize_dataset(
                 tokenizer.apply_chat_template(
                     example["messages"][i],
                     tokenize=False,
+                    enable_thinking=enable_thinking,
                 )
             )
         return output_texts

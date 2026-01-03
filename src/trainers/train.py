@@ -114,6 +114,7 @@ def main(config: TrainConfig):
         processed_dataset,
         tokenizer,
         max_seq_length=config.max_seq_length,
+        enable_thinking=config.enable_thinking,
     )
 
     # eval 데이터 로드
@@ -123,6 +124,7 @@ def main(config: TrainConfig):
         eval_processed,
         tokenizer,
         max_seq_length=config.max_seq_length,
+        enable_thinking=config.enable_thinking,
     )
 
     # Data Collator 설정
@@ -144,6 +146,7 @@ def main(config: TrainConfig):
         output_dir=config.output_dir,
         per_device_train_batch_size=config.batch_size,
         per_device_eval_batch_size=config.batch_size,
+        gradient_accumulation_steps=config.gradient_accumulation_steps,
         num_train_epochs=config.epochs,
         learning_rate=config.learning_rate,
         weight_decay=config.weight_decay,
