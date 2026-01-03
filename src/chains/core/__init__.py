@@ -2,21 +2,22 @@ from chains.core.state import (
     DecodedState,
     ForwardState,
     OutputState,
+    PipelineState,
     PlanningState,
     QAInputState,
-    QueryResult,
-    QuestionState,
     RetrievalState,
 )
+from schemas.question import PreprocessedQuestion
 
 __all__ = [
+    # Data schema
+    "PreprocessedQuestion",
     # State types
-    "QuestionState",
+    "PipelineState",
     "PlanningState",
     "RetrievalState",
     "QAInputState",
     "ForwardState",
     "DecodedState",
-    "QueryResult",
     "OutputState",
 ]

@@ -6,7 +6,7 @@ Pipeline 전체에서 사용되는 TypedDict 기반 state 정의.
 기존의 dataclass + dict + TypedDict 혼용 방식을 대체합니다.
 
 Pipeline flow:
-    QuestionState → PlanningState → RetrievalState → QAInputState
+    PreprocessedQuestion → PlanningState → RetrievalState → QAInputState
     → ForwardState → DecodedState → OutputState
 """
 
@@ -16,22 +16,30 @@ from langchain_core.documents import Document
 from langchain_core.messages import BaseMessage
 from typing_extensions import NotRequired
 
+from schemas.question import PreprocessedQuestion
 from schemas.retrieval import RetrievalPlan, RetrievalResponse
 
 
-class QuestionState(TypedDict):
+class PipelineState(TypedDict):
     """
-    입력 질문 데이터 (기존 ProcessedQuestion을 TypedDict로 변환).
+    통일된 파이프라인 상태.
 
-    Pipeline의 시작점이며, 모든 단계에서 data 필드로 전달됩니다.
+    필드는 삭제 없이 추가만 됩니다. 각 단계는 필요한 필드를 추가하며,
+    이전 단계의 정보를 유지합니다.
+
+    Pipeline flow:
+        PipelineState(data=...)
+        → PipelineState(data=..., plan=...)
+        → PipelineState(data=..., plan=..., multi_docs=...)
+        → PipelineState(data=..., plan=..., multi_docs=..., documents=...)
+        → PipelineState(data=..., plan=..., multi_docs=..., documents=..., context=...)
     """
 
-    id: str
-    paragraph: str
-    question: str
-    choices: list[str]
-    question_plus: NotRequired[str | None]
-    len_choices: int
+    data: PreprocessedQuestion
+    plan: NotRequired[RetrievalPlan]
+    multi_docs: NotRequired[list[list[Document]]]  # 쿼리별 문서 (리랭커 입출력용)
+    documents: NotRequired[list[Document]]  # 병합 후 문서
+    context: NotRequired[str]
 
 
 class PlanningState(TypedDict):
@@ -41,7 +49,7 @@ class PlanningState(TypedDict):
     Planner LLM이 검색 쿼리 계획을 생성한 결과입니다.
     """
 
-    data: QuestionState
+    data: PreprocessedQuestion
     plan: RetrievalPlan
 
 
@@ -52,7 +60,7 @@ class RetrievalState(TypedDict):
     검색 서비스로부터 문서를 가져와 context로 포맷팅한 결과입니다.
     """
 
-    data: QuestionState
+    data: PreprocessedQuestion
     plan: RetrievalPlan
     external_knowledge: list[RetrievalResponse]
     context: str
@@ -89,22 +97,6 @@ class DecodedState(ForwardState):
     """
 
     pred: str  # "1".."len_choices"
-
-
-class QueryResult(TypedDict):
-    """
-    단일 query의 검색 결과.
-
-    Retrieval 단계에서 각 query별로 그룹화된 결과를 표현합니다.
-    Reranker가 query 정보를 필요로 하므로 query를 함께 저장합니다.
-
-    LangChain Document를 사용하여 service layer (RetrievalResponse)와
-    chain layer를 디커플링합니다.
-    """
-
-    query: str
-    top_k: int
-    documents: list[Document]
 
 
 class OutputState(TypedDict):

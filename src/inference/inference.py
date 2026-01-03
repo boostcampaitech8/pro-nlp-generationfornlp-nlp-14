@@ -5,25 +5,24 @@ import pandas as pd
 from dotenv import load_dotenv
 from langchain_core.runnables import (
     RunnableBranch,
-    RunnableParallel,
     RunnablePassthrough,
 )
 from langchain_openai import ChatOpenAI
 from tqdm import tqdm
 
-from chains.core.state import QuestionState
 from chains.planning import build_planner
 from chains.qa import build_qa_chain
 from chains.retrieval import build_multi_query_retriever, build_tavily_retriever
 from chains.retrieval.context_builder import build_context
 from chains.runnables.conditions import is_shorter_than
 from chains.runnables.logging import tap
-from chains.runnables.selectors import constant, selector
+from chains.runnables.selectors import selector
 from chains.utils.utils import round_robin_merge
 from data.data_processing import load_and_parse_data
 from prompts import get_prompt_manager
 from prompts.plan.plan import plan_prompt
 from schemas.mcq.rows import PredRow, ScoreRow
+from schemas.question import PreprocessedQuestion
 from utils import InferenceConfig
 
 
@@ -53,66 +52,72 @@ def main(config: InferenceConfig):
     planner = build_planner(llm=planner_llm, prompt=plan_prompt)
 
     # -------------------------
-    # 3) retriever chain 생성
+    # 3) Retrieval chain - multi_docs, documents 생성
     # -------------------------
-    retrieval_chain = RunnableParallel(
-        data=selector("data"),
-        context=(
-            selector("plan")
-            | build_multi_query_retriever(retriever=base_retriever)
-            | round_robin_merge
-            | (lambda docs: build_context(docs, max_chars=config.max_retrieval_context_chars))
-        ),
+    retrieval_chain = (
+        RunnablePassthrough.assign(
+            multi_docs=selector("plan") | build_multi_query_retriever(base_retriever)
+        )
+        # 리랭커 삽입 지점:
+        # | RunnablePassthrough.assign(multi_docs=reranker)
+        | RunnablePassthrough.assign(documents=selector("multi_docs") | round_robin_merge)
     )
 
     # -------------------------
-    # 4) Context chain 생성 -> paragraph 길이에 따라 Branch
+    # 4) Context builder - documents → context
+    # -------------------------
+    context_builder = RunnablePassthrough.assign(
+        context=lambda x: build_context(
+            x.get("documents", []), max_chars=config.max_retrieval_context_chars
+        )
+    )
+
+    # -------------------------
+    # 5) Context chain - 분기 후 공통으로 context 생성
     # -------------------------
     query_plan_logger = tap(
         config.query_plan_log_path,
         transform=lambda s: {"id": s["data"]["id"], "plan": s["plan"]},
     )
 
-    context_chain = RunnableBranch(
-        (
-            is_shorter_than(
-                "paragraph", max_chars=config.max_paragraph_chars_for_planner
-            ),  # paragraph가 짧으면
+    context_chain = (
+        RunnableBranch(
             (
-                RunnableParallel(data=RunnablePassthrough(), plan=planner)
-                | query_plan_logger
-                | retrieval_chain
-            ),  # retrieval 실행
-        ),
-        constant(""),  # paragraph가 길면 빈 context
+                is_shorter_than(
+                    "data", "paragraph", max_chars=config.max_paragraph_chars_for_planner
+                ),
+                (
+                    RunnablePassthrough.assign(plan=selector("data") | planner)
+                    | query_plan_logger
+                    | retrieval_chain
+                ),
+            ),
+            RunnablePassthrough(),
+        )
+        | context_builder
     )
 
     # -------------------------
-    # 5) QA chain 생성
+    # 6) QA chain 생성
     # -------------------------
     qa_chain = build_qa_chain(config=config, prompt_manager=prompt_manager)
 
     # -------------------------
-    # 6) Whole chain 생성
+    # 7) Whole chain 생성
     # -------------------------
-    whole_chain = (
-        RunnableParallel(
-            data=RunnablePassthrough(),
-            context=context_chain,
-        )
-        | qa_chain
-    )
+    whole_chain = context_chain | qa_chain
 
     infer_results: list[tuple[PredRow, ScoreRow]] = []
     for _, row in tqdm(test_df.iterrows(), desc="Inference"):
-        # QuestionState (TypedDict) 생성
-        data: QuestionState = {
+        # PreprocessedQuestion (TypedDict) 생성
+        question_data: PreprocessedQuestion = {
             **row,
             "len_choices": len(row["choices"]),
         }
+        # PipelineState로 wrap하여 invoke
         outs = whole_chain.invoke(
-            data,
-            config={"run_name": str(data["id"])},
+            {"data": question_data},
+            config={"run_name": str(question_data["id"])},
         )
         infer_results.append(outs)
 
