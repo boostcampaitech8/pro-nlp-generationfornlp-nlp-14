@@ -1,10 +1,10 @@
-from chains.core.state import QuestionState
 from prompts.base import BasePrompt
+from schemas.question import PreprocessedQuestion
 
 
 def build_mcq_request(
     prompt: BasePrompt,
-    data: QuestionState,
+    data: PreprocessedQuestion,
     *,
     context: str = "",
 ) -> dict:
@@ -12,13 +12,13 @@ def build_mcq_request(
 
     Args:
         prompt (BasePrompt): 프롬프트 매니저
-        data (QuestionState): 질문 상태 (TypedDict)
+        data (PreprocessedQuestion): 전처리된 질문 데이터 (TypedDict)
         context (str, optional): 외부 컨텍스트. Defaults to "".
 
     Returns:
         dict: QA chain 입력 형태 (id, messages, len_choices)
     """
-    # QuestionState에 context 추가
+    # PreprocessedQuestion에 context 추가
     row = {**data, "context": f"### 힌트\n{context}" if context else ""}
 
     system_msg = prompt.make_system_prompt(row)
