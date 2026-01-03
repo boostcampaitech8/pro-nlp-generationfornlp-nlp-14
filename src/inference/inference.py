@@ -16,7 +16,7 @@ from chains.retrieval import build_multi_query_retriever, build_tavily_retriever
 from chains.retrieval.context_builder import build_context
 from chains.runnables.conditions import is_shorter_than
 from chains.runnables.logging import tap
-from chains.runnables.selectors import selector
+from chains.runnables.selectors import constant, selector
 from chains.utils.utils import round_robin_merge
 from data.data_processing import load_and_parse_data
 from prompts import get_prompt_manager
@@ -36,76 +36,58 @@ def main(config: InferenceConfig):
     prompt_manager = get_prompt_manager(config.prompt_style)
 
     # -------------------------
-    # 1) Base retriever 생성
-    # -------------------------
-    base_retriever = build_tavily_retriever()
-
-    # -------------------------
-    # 2) Planner 생성
+    # 1) Planner 생성
     # -------------------------
     planner_llm = ChatOpenAI(
         base_url=os.environ["LLAMA_CPP_SERVER_URL"],
         api_key="API_KEY_NOT_NEED",  # type: ignore
+        name="Planner_Model",
         model="LLama_cpp_model",
         temperature=config.planner_llm_temperature,
     )
     planner = build_planner(llm=planner_llm, prompt=plan_prompt)
 
     # -------------------------
-    # 3) Retrieval chain - multi_docs, documents 생성
+    # 2) Retriever 생성
     # -------------------------
-    retrieval_chain = (
-        RunnablePassthrough.assign(
-            multi_docs=selector("plan") | build_multi_query_retriever(base_retriever)
-        )
-        # 리랭커 삽입 지점:
-        # | RunnablePassthrough.assign(multi_docs=reranker)
-        | RunnablePassthrough.assign(documents=selector("multi_docs") | round_robin_merge)
-    )
+    retriever = build_multi_query_retriever(build_tavily_retriever())
 
     # -------------------------
-    # 4) Context builder - documents → context
+    # 3) Augmentation chain (조건부: paragraph 짧으면 planning → retrieval → context)
     # -------------------------
-    context_builder = RunnablePassthrough.assign(
-        context=lambda x: build_context(
-            x.get("documents", []), max_chars=config.max_retrieval_context_chars
-        )
+    plan_logger = tap(
+        config.query_plan_log_path, lambda x: {"id": x["data"]["id"], "plan": x["plan"]}
     )
 
-    # -------------------------
-    # 5) Context chain - 분기 후 공통으로 context 생성
-    # -------------------------
-    query_plan_logger = tap(
-        config.query_plan_log_path,
-        transform=lambda s: {"id": s["data"]["id"], "plan": s["plan"]},
-    )
-
-    context_chain = (
-        RunnableBranch(
+    augmentation_chain = RunnablePassthrough.assign(
+        context=RunnableBranch(
             (
                 is_shorter_than(
                     "data", "paragraph", max_chars=config.max_paragraph_chars_for_planner
                 ),
-                (
-                    RunnablePassthrough.assign(plan=selector("data") | planner)
-                    | query_plan_logger
-                    | retrieval_chain
-                ),
+                selector("data")
+                | RunnablePassthrough.assign(plan=planner)
+                | plan_logger  # plan 로그 저장
+                | selector("plan")
+                | retriever  # 리랭커도입시 | RunnablePassthrough.assign(docs=selector("plan") | retriever)
+                # 리랭커 삽입 지점: | reranker
+                | round_robin_merge  # will be replaced merge strategy
+                | (lambda docs: build_context(docs, max_chars=config.max_retrieval_context_chars)),
             ),
-            RunnablePassthrough(),
-        )
-        | context_builder
+            # paragraph가 길면 빈 context
+            constant(""),
+        ),
     )
 
     # -------------------------
-    # 6) QA chain 생성
+    # 4) QA chain 생성
     # -------------------------
     qa_chain = build_qa_chain(config=config, prompt_manager=prompt_manager)
 
     # -------------------------
-    # 7) Whole chain 생성
+    # 5) Whole chain 생성
     # -------------------------
-    whole_chain = context_chain | qa_chain
+    whole_chain = augmentation_chain | qa_chain
 
     infer_results: list[tuple[PredRow, ScoreRow]] = []
     for _, row in tqdm(test_df.iterrows(), desc="Inference"):

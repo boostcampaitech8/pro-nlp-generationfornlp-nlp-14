@@ -12,7 +12,6 @@ Pipeline flow:
 
 from typing import Any, TypedDict
 
-from langchain_core.documents import Document
 from langchain_core.messages import BaseMessage
 from typing_extensions import NotRequired
 
@@ -24,21 +23,12 @@ class PipelineState(TypedDict):
     """
     통일된 파이프라인 상태.
 
-    필드는 삭제 없이 추가만 됩니다. 각 단계는 필요한 필드를 추가하며,
-    이전 단계의 정보를 유지합니다.
-
     Pipeline flow:
         PipelineState(data=...)
-        → PipelineState(data=..., plan=...)
-        → PipelineState(data=..., plan=..., multi_docs=...)
-        → PipelineState(data=..., plan=..., multi_docs=..., documents=...)
-        → PipelineState(data=..., plan=..., multi_docs=..., documents=..., context=...)
+        → PipelineState(data=..., context=...)
     """
 
     data: PreprocessedQuestion
-    plan: NotRequired[RetrievalPlan]
-    multi_docs: NotRequired[list[list[Document]]]  # 쿼리별 문서 (리랭커 입출력용)
-    documents: NotRequired[list[Document]]  # 병합 후 문서
     context: NotRequired[str]
 
 
