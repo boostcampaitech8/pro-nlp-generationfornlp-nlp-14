@@ -5,9 +5,12 @@
 """
 
 from infrastructure.embedders import SolarEmbedder, SolarEmbedderConfig
+from infrastructure.websearch import TavilyClientWrapper
 
 __all__ = [
     # Embedders
     "SolarEmbedder",
     "SolarEmbedderConfig",
+    # WebSearch
+    "TavilyClientWrapper",
 ]
