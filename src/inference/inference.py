@@ -12,6 +12,7 @@ from tqdm import tqdm
 
 from chains.planning import build_planner
 from chains.qa import build_qa_chain
+from chains.reranker import build_reranker, merge_strategies
 from chains.retrieval import build_multi_query_retriever, build_tavily_retriever
 from chains.retrieval.context_builder import build_context
 from chains.runnables.conditions import all_conditions, constant_check, is_shorter_than
@@ -46,6 +47,16 @@ def main(config: InferenceConfig):
         temperature=config.planner_llm_temperature,
     )
     planner = build_planner(llm=planner_llm, prompt=plan_prompt)
+
+    #  -------------------------
+    # Reranker 생성
+    # -------------------------
+    reranker = build_reranker(base_url=os.environ["RERANKER_URL"])
+    merger = merge_strategies(
+        strategy_type="query_first",  # 전략 유형: query_first or global_top
+        top_n=config.num_retrieved_docs,
+        max_chars=config.max_retrieval_context_chars,
+    )
 
     # -------------------------
     # 2) Retriever 생성
