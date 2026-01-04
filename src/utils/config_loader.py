@@ -186,6 +186,9 @@ class InferenceConfig(BaseConfig):
     # 출력 설정
     output_path: str
 
+    # rag 사용 여부
+    use_rag: bool
+
     # Pipeline 설정
     max_retrieval_context_chars: int
     max_paragraph_chars_for_planner: int
@@ -206,6 +209,7 @@ class InferenceConfig(BaseConfig):
         "pipeline_max_paragraph_chars_for_planner": "max_paragraph_chars_for_planner",
         "pipeline_query_plan_log_path": "query_plan_log_path",
         "planner_llm_temperature": "planner_llm_temperature",
+        "use_rag": "use_rag",
     }
 
 
