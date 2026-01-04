@@ -74,6 +74,7 @@ def create_local_retriever(
         chunk_size=cfg.chunk_size,
         chunk_sparse_weight=cfg.chunk_sparse_weight,
         chunk_dense_weight=cfg.chunk_dense_weight,
+        use_rrf=cfg.use_rrf,
     )
     service = LocalRetrieverService(
         pdr_retriever=pdr,

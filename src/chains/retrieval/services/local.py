@@ -30,6 +30,7 @@ class LocalRetrieverConfig:
     chunk_size: int = 20
     chunk_sparse_weight: float = 1.0
     chunk_dense_weight: float = 2.0
+    use_rrf: bool = False
 
 
 class LocalRetrieverService(RetrievalServicePort):
@@ -87,6 +88,7 @@ class LocalRetrieverService(RetrievalServicePort):
                 size=self._config.parent_size,
                 sparse_weight=self._config.parent_sparse_weight,
                 dense_weight=self._config.parent_dense_weight,
+                use_rrf=self._config.use_rrf,
             )
             doc_ids = [
                 str(h.source.get("doc_id"))
