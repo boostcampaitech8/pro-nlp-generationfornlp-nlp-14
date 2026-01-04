@@ -6,7 +6,6 @@ from utils.choice_utils import get_choice_token_ids
 def build_local_forward(config):
     # Lazy import: use_remote=False일 때만 필요
     import torch
-
     from inference.inference_utils import load_model
 
     model, tokenizer = load_model(config.checkpoint_path, config.max_seq_length)

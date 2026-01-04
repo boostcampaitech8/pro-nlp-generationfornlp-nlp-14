@@ -78,7 +78,7 @@ train:
 	uv run python src/trainers/train.py $(CONFIG)
 
 inference:
-	uv run python src/inference/inference.py $(CONFIG)
+	uv run python -m inference.inference $(CONFIG)
 
 # 데이터 전처리 (소스 태깅 + Fold 분할)
 preprocess:

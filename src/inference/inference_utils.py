@@ -1,10 +1,9 @@
-from unsloth import FastLanguageModel  # noqa: I001
-from peft import AutoPeftModelForCausalLM
-from transformers import AutoModelForCausalLM, AutoTokenizer
-
-
 def load_model(model_path: str, max_seq_length: int | None = None):
     """checkpoint 경로에 따라 모델/토크나이저를 로드한다."""
+    from unsloth import FastLanguageModel  # noqa: I001
+    from peft import AutoPeftModelForCausalLM
+    from transformers import AutoModelForCausalLM, AutoTokenizer
+
     print(f"[LOAD from]: {model_path}")
     try:
         model, tokenizer = FastLanguageModel.from_pretrained(
