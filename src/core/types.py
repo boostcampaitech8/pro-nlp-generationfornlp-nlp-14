@@ -51,3 +51,17 @@ class SearchParams:
     text_fields: list[str] = field(default_factory=list)
     vector_field: str | None = None
     source_fields: list[str] | None = None
+
+
+@dataclass
+class WebSearchResult:
+    """웹 검색 결과 단일 항목.
+
+    벤더 독립적인 웹 검색 결과 타입.
+    """
+
+    title: str
+    url: str
+    content: str
+    score: float | None = None
+    raw: dict[str, Any] = field(default_factory=dict)

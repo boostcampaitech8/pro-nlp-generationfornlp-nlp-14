@@ -8,15 +8,18 @@ from core.protocols import (
     EmbedderProtocol,
     ParentReaderProtocol,
     SearcherProtocol,
+    WebSearchClientProtocol,
 )
-from core.types import SearchHit, SearchParams
+from core.types import SearchHit, SearchParams, WebSearchResult
 
 __all__ = [
     # Types
     "SearchHit",
     "SearchParams",
+    "WebSearchResult",
     # Protocols
     "EmbedderProtocol",
     "SearcherProtocol",
     "ParentReaderProtocol",
+    "WebSearchClientProtocol",
 ]
