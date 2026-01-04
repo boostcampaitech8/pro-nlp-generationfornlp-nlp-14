@@ -14,7 +14,7 @@ from chains.planning import build_planner
 from chains.qa import build_qa_chain
 from chains.retrieval import build_multi_query_retriever, build_tavily_retriever
 from chains.retrieval.context_builder import build_context
-from chains.runnables.conditions import is_shorter_than
+from chains.runnables.conditions import all_conditions, constant_check, is_shorter_than
 from chains.runnables.logging import tap
 from chains.runnables.selectors import constant, selector
 from chains.utils.utils import round_robin_merge
@@ -53,7 +53,7 @@ def main(config: InferenceConfig):
     retriever = build_multi_query_retriever(build_tavily_retriever())
 
     # -------------------------
-    # 3) Augmentation chain (조건부: paragraph 짧으면 planning → retrieval → context)
+    # 3) Augmentation chain (조건부: paragraph 짧고 RAG 사용 시에만 planning → retrieval → context)
     # -------------------------
     plan_logger = tap(
         config.query_plan_log_path, lambda x: {"id": x["data"]["id"], "plan": x["plan"]}
@@ -62,9 +62,12 @@ def main(config: InferenceConfig):
     augmentation_chain = RunnablePassthrough.assign(
         context=RunnableBranch(
             (
-                is_shorter_than(
-                    "data", "paragraph", max_chars=config.max_paragraph_chars_for_planner
-                ),
+                all_conditions(
+                    is_shorter_than(
+                        "data", "paragraph", max_chars=config.max_paragraph_chars_for_planner
+                    ),
+                    constant_check(config.use_rag),
+                ),  # paragraph가 짧고 RAG 사용 시에만 planner + retrieval 실행
                 selector("data")
                 | RunnablePassthrough.assign(plan=planner)
                 | plan_logger  # plan 로그 저장
@@ -74,7 +77,7 @@ def main(config: InferenceConfig):
                 | round_robin_merge  # will be replaced merge strategy
                 | (lambda docs: build_context(docs, max_chars=config.max_retrieval_context_chars)),
             ),
-            # paragraph가 길면 빈 context
+            # paragraph가 길거나 RAG 미사용 시 빈 context
             constant(""),
         ),
     )
