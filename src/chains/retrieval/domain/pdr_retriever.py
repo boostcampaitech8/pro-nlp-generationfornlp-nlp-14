@@ -63,6 +63,8 @@ class PDRRetriever:
         size: int = 20,
         sparse_weight: float = 2.0,
         dense_weight: float = 0.5,
+        use_rrf: bool = False,
+        rrf_rank_constant: int = 60,
     ) -> list[DocumentSearchHit]:
         """Parent 레벨 하이브리드 검색.
 
@@ -73,8 +75,10 @@ class PDRRetriever:
             query_vector: 쿼리 임베딩 벡터
             subject: 과목 필터 (예: "수학", "국어")
             size: 반환 결과 수
-            sparse_weight: BM25 가중치
-            dense_weight: kNN 가중치
+            sparse_weight: BM25 가중치 (use_rrf=False일 때 사용)
+            dense_weight: kNN 가중치 (use_rrf=False일 때 사용)
+            use_rrf: True면 가중치 대신 RRF로 점수 결합
+            rrf_rank_constant: RRF k 파라미터 (기본값 60)
 
         Returns:
             검색 결과 리스트
@@ -87,6 +91,8 @@ class PDRRetriever:
             size=size,
             sparse_weight=sparse_weight,
             dense_weight=dense_weight,
+            use_rrf=use_rrf,
+            rrf_rank_constant=rrf_rank_constant,
             filter_query=filter_q,
             text_fields=["topic^2", "parent_text"],
             vector_field="topic_vector",
@@ -109,6 +115,8 @@ class PDRRetriever:
         size: int = 30,
         sparse_weight: float = 1.0,
         dense_weight: float = 2.0,
+        use_rrf: bool = False,
+        rrf_rank_constant: int = 60,
     ) -> list[DocumentSearchHit]:
         """Chunk 레벨 하이브리드 검색.
 
@@ -120,8 +128,10 @@ class PDRRetriever:
             doc_ids: Parent ID 필터 (1단계 결과에서 추출)
             subject: 과목 필터
             size: 반환 결과 수
-            sparse_weight: BM25 가중치
-            dense_weight: kNN 가중치
+            sparse_weight: BM25 가중치 (use_rrf=False일 때 사용)
+            dense_weight: kNN 가중치 (use_rrf=False일 때 사용)
+            use_rrf: True면 가중치 대신 RRF로 점수 결합
+            rrf_rank_constant: RRF k 파라미터 (기본값 60)
 
         Returns:
             검색 결과 리스트
@@ -144,6 +154,8 @@ class PDRRetriever:
             size=size,
             sparse_weight=sparse_weight,
             dense_weight=dense_weight,
+            use_rrf=use_rrf,
+            rrf_rank_constant=rrf_rank_constant,
             filter_query=filter_q,
             text_fields=["chunk_text", "topic"],
             vector_field="chunk_vector",

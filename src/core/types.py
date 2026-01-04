@@ -47,6 +47,10 @@ class DocumentSearchParams:
     sparse_weight: float = 1.0
     dense_weight: float = 1.0
 
+    # RRF 옵션 (use_rrf=True면 가중치 대신 RRF 사용)
+    use_rrf: bool = False
+    rrf_rank_constant: int = 60  # RRF k 파라미터
+
     # 필드 설정
     text_fields: list[str] = field(default_factory=list)
     vector_field: str | None = None
