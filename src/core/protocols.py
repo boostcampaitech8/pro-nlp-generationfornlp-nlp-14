@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from typing import Any, Protocol
 
-from core.types import SearchHit, SearchParams
+from core.types import SearchHit, SearchParams, WebSearchResult
 
 
 class SearcherProtocol(Protocol):
@@ -57,3 +57,26 @@ class EmbedderProtocol(Protocol):
     def embed(self, text: str) -> list[float]: ...
 
     def embed_batch(self, texts: list[str]) -> list[list[float]]: ...
+
+
+class WebSearchClientProtocol(Protocol):
+    """웹 검색 클라이언트 인터페이스.
+
+    외부 웹 검색 API를 래핑하는 클라이언트들이 구현해야 할 인터페이스.
+
+    Example:
+        >>> class TavilyClientWrapper:
+        ...     def search(self, query: str, max_results: int, **kwargs) -> list[WebSearchResult]:
+        ...         ...  # Tavily API 호출
+        >>>
+        >>> class BingClientWrapper:
+        ...     def search(self, query: str, max_results: int, **kwargs) -> list[WebSearchResult]:
+        ...         ...  # Bing API 호출
+    """
+
+    def search(
+        self,
+        query: str,
+        max_results: int = 10,
+        **kwargs: Any,
+    ) -> list[WebSearchResult]: ...
