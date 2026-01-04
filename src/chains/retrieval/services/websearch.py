@@ -11,19 +11,8 @@ from typing import Any
 
 from chains.retrieval.services.base import RetrievalServicePort
 from core.protocols import WebSearchClientProtocol
-from core.types import WebSearchResult
 from schemas.retrieval.plan import RetrievalRequest
 from schemas.retrieval.response import RetrievalResponse
-
-
-def _format_context(result: WebSearchResult) -> str:
-    """검색 결과를 context 문자열로 포맷팅."""
-    parts: list[str] = []
-    if result.title:
-        parts.append(f"[TITLE] {result.title}")
-    if result.content:
-        parts.append(result.content)
-    return "\n".join(parts).strip()
 
 
 class WebSearchService(RetrievalServicePort):
@@ -65,13 +54,12 @@ class WebSearchService(RetrievalServicePort):
         return [
             RetrievalResponse(
                 question=request.query,
-                context=_format_context(result),
+                context=result.content,
                 metadata={
-                    "title": result.title,
+                    "topic": result.title,
                     "url": result.url,
                     "score": result.score,
                     "source": "web",
-                    "raw_result": result.raw,
                 },
             )
             for result in results
