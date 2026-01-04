@@ -85,9 +85,9 @@ class TavilyClientWrapper:
             if isinstance(item, dict):
                 results.append(
                     WebSearchResult(
-                        title=str(item.get("title", "") or ""),
-                        url=str(item.get("url", "") or ""),
-                        content=str(item.get("content", "") or ""),
+                        title=str(item.get("title") or ""),
+                        url=str(item.get("url") or ""),
+                        content=str(item.get("content") or ""),
                         score=item.get("score") or item.get("relevance_score"),
                         raw=item,
                     )
