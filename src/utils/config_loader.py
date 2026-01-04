@@ -285,6 +285,10 @@ class RetrievalConfig(BaseConfig):
     chunk_sparse_weight: float = 1.0
     chunk_dense_weight: float = 2.0
 
+    # 웹서치/로컬 가중치 (EnsembleRetriever)
+    local_retriever_weight: float = 0.5
+    web_retriever_weight: float = 0.5
+
     _yaml_key_mapping: ClassVar[dict[str, str]] = {
         "use_rrf": "use_rrf",
         "rrf_rank_constant": "rrf_rank_constant",
@@ -298,4 +302,7 @@ class RetrievalConfig(BaseConfig):
         "chunk_size": "chunk_size",
         "chunk_sparse_weight": "chunk_sparse_weight",
         "chunk_dense_weight": "chunk_dense_weight",
+        # 웹서치/로컬 가중치 (EnsembleRetriever)
+        "ensemble_local_retriever_weight": "local_retriever_weight",
+        "ensemble_web_retriever_weight": "web_retriever_weight",
     }
