@@ -1,8 +1,7 @@
-from dataclasses import dataclass
+from pydantic import BaseModel
 
 
-@dataclass
-class RetrievalRequest:
+class RetrievalRequest(BaseModel):
     """
     - query topic
     - query chunked
