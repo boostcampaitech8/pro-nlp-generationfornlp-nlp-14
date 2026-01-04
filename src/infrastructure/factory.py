@@ -6,6 +6,7 @@ Infrastructure 팩토리.
 
 from __future__ import annotations
 
+import os
 from collections.abc import Sequence
 
 from core.protocols import EmbedderProtocol, WebSearchClientProtocol
@@ -37,38 +38,39 @@ DEFAULT_WEBSEARCH_EXCLUDE_DOMAINS: Sequence[str] = (
 )
 
 
-def create_embedder(
-    config: SolarEmbedderConfig | None = None,
-) -> EmbedderProtocol:
+def create_embedder() -> EmbedderProtocol:
     """
     Embedder 인스턴스를 생성합니다.
 
-    Args:
-        config: SolarEmbedder 설정 (None이면 기본값 사용)
+    환경변수에서 설정을 읽습니다:
+    - EMBEDDING_DIMS: 임베딩 차원 (필수)
+    - SOLAR_PRO2_API_KEY: Solar API 키 (필수)
 
     Returns:
         EmbedderProtocol 구현체
+
+    Raises:
+        KeyError: EMBEDDING_DIMS 환경변수가 설정되지 않은 경우
+        ValueError: SOLAR_PRO2_API_KEY가 설정되지 않은 경우
     """
+    dim = int(os.environ["EMBEDDING_DIMS"])
+    config = SolarEmbedderConfig(dimensions=dim)
     return SolarEmbedder(config)
 
 
-def create_websearch_client(
-    api_key: str | None = None,
-    exclude_domains: Sequence[str] | None = None,
-) -> WebSearchClientProtocol:
+def create_websearch_client() -> WebSearchClientProtocol:
     """
     웹 검색 클라이언트를 생성합니다.
 
-    Args:
-        api_key: Tavily API 키 (None이면 env에서 읽음)
-        exclude_domains: 제외할 도메인 목록 (None이면 기본값 사용)
+    환경변수에서 설정을 읽습니다:
+    - TAVILY_API_KEY: Tavily API 키 (필수)
 
     Returns:
         WebSearchClientProtocol 구현체
     """
     default_params: TavilySearchParams = {
-        "exclude_domains": list(exclude_domains or DEFAULT_WEBSEARCH_EXCLUDE_DOMAINS),
+        "exclude_domains": list(DEFAULT_WEBSEARCH_EXCLUDE_DOMAINS),
         "topic": "general",
     }
 
-    return TavilyClientWrapper(api_key=api_key, default_params=default_params)
+    return TavilyClientWrapper(default_params=default_params)

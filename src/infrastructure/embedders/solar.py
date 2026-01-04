@@ -16,13 +16,19 @@ from core.protocols import EmbedderProtocol
 
 @dataclass
 class SolarEmbedderConfig:
-    """Solar Embedder 설정."""
+    """Solar Embedder 설정.
 
-    api_key: str | None = None
+    Attributes:
+        dimensions: 임베딩 차원 (필수, EMBEDDING_DIMS env에서 주입)
+        model: 임베딩 모델명 ("embedding-query" 또는 "embedding-passage")
+        base_url: API base URL
+        max_chars: 토큰 제한을 피하기 위한 최대 글자수
+    """
+
+    dimensions: int  # 필수 (EMBEDDING_DIMS env)
+    model: str = "embedding-query"  # query용 기본값
     base_url: str = "https://api.upstage.ai/v1"
-    model: str = "embedding-passage"
-    max_chars: int = 2500  # 토큰 제한을 피하기 위한 최대 글자수
-    dimensions: int = 4096
+    max_chars: int = 2500
 
 
 class SolarEmbedder:
@@ -32,15 +38,19 @@ class SolarEmbedder:
     EmbedderProtocol을 구현합니다.
     """
 
-    def __init__(self, config: SolarEmbedderConfig | None = None) -> None:
-        self._config = config or SolarEmbedderConfig()
+    def __init__(self, config: SolarEmbedderConfig) -> None:
+        """
+        Args:
+            config: Solar Embedder 설정 (dimensions 필수)
 
-        api_key = self._config.api_key or os.getenv("SOLAR_PRO2_API_KEY")
+        Raises:
+            ValueError: SOLAR_PRO2_API_KEY 환경변수가 설정되지 않은 경우
+        """
+        self._config = config
+
+        api_key = os.getenv("SOLAR_PRO2_API_KEY")
         if not api_key:
-            raise ValueError(
-                "SOLAR_PRO2_API_KEY가 필요합니다. "
-                "환경 변수 또는 SolarEmbedderConfig.api_key로 설정하세요."
-            )
+            raise ValueError("SOLAR_PRO2_API_KEY 환경변수가 필요합니다.")
 
         self._client = OpenAI(api_key=api_key, base_url=self._config.base_url)
 
@@ -97,5 +107,5 @@ class SolarEmbedder:
 # Protocol 호환성 검증 (타입 체커용)
 def _verify_protocol() -> None:
     """SolarEmbedder가 EmbedderProtocol을 구현하는지 타입 체커가 확인."""
-    embedder: EmbedderProtocol = SolarEmbedder(SolarEmbedderConfig(api_key="test"))
+    embedder: EmbedderProtocol = SolarEmbedder(SolarEmbedderConfig(dimensions=4096))
     _ = embedder

@@ -75,6 +75,31 @@ wandb:
   run_name: test # 자동생성, 이름 지정도 가능
 
 # -------------------------------------------- #
+#                  Retrieval 설정               #
+# -------------------------------------------- #
+
+retrieval:
+  # RRF 설정
+  use_rrf: false
+  rrf_rank_constant: 60
+
+  # 인덱스명 (선택적)
+  parents_index: "parents"
+  chunks_index: "chunks"
+
+  # Parent 검색 (Stage 1: BM25 비중 높게)
+  parent:
+    size: 10
+    sparse_weight: 2.0
+    dense_weight: 0.5
+
+  # Chunk 검색 (Stage 2: Dense 비중 높게)
+  chunk:
+    size: 20
+    sparse_weight: 1.0
+    dense_weight: 2.0
+
+# -------------------------------------------- #
 #                     SCORE                    #
 # -------------------------------------------- #
 

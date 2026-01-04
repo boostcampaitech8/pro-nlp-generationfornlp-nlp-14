@@ -2,6 +2,18 @@
 Retrieval 팩토리.
 
 vectorstore와 infrastructure의 컴포넌트를 조합하여 Retriever를 생성합니다.
+
+사용법:
+    # config.yaml에서 로드
+    config = RetrievalConfig.from_yaml("configs/config.yaml")
+    retriever = create_local_retriever(config)
+
+    # 또는 기본값 사용
+    retriever = create_local_retriever()
+
+ES/Embedder 연결 정보는 환경변수에서 읽습니다 (.env):
+    - ES_URL, ES_USERNAME, ES_PASSWORD
+    - SOLAR_PRO2_API_KEY
 """
 
 from __future__ import annotations
@@ -15,44 +27,53 @@ from chains.retrieval.services.local import (
     LocalRetrieverService,
 )
 from chains.retrieval.services.websearch import WebSearchService
-from infrastructure.embedders import SolarEmbedderConfig
 from infrastructure.factory import create_embedder, create_websearch_client
-from vectorstore.config import ESConfig
+from utils.config_loader import RetrievalConfig
 from vectorstore.factory import create_es_components
 
 
 def create_local_retriever(
-    es_config: ESConfig | None = None,
-    embedder_config: SolarEmbedderConfig | None = None,
-    pdr_config: PDRConfig | None = None,
-    retriever_config: LocalRetrieverConfig | None = None,
+    config: RetrievalConfig | None = None,
 ) -> BaseRetriever:
     """
     로컬 ES 기반 Retriever를 생성합니다.
 
-    vectorstore와 infrastructure 팩토리를 조합하여
-    완전히 구성된 BaseRetriever를 반환합니다.
+    config.yaml의 retrieval 섹션에서 설정을 로드합니다.
+    ES/Embedder 연결 정보는 환경변수에서 읽습니다.
 
     Args:
-        es_config: Elasticsearch 설정
-        embedder_config: Embedder 설정
-        pdr_config: PDR 검색기 설정
-        retriever_config: LocalRetriever 설정
+        config: Retrieval 설정 (None이면 기본값 사용)
 
     Returns:
         LangChain BaseRetriever 호환 retriever
     """
-    # 1) ES 컴포넌트 생성
-    es_components = create_es_components(es_config)
+    cfg = config or RetrievalConfig()
 
-    # 2) Embedder 생성
-    embedder = create_embedder(embedder_config)
+    # 1) ES 컴포넌트 생성 (env에서 연결 정보 읽음)
+    es_components = create_es_components()
 
-    # 3) PDRRetriever + LocalRetrieverService 생성
+    # 2) Embedder 생성 (env에서 API key, EMBEDDING_DIMS 읽음)
+    embedder = create_embedder()
+
+    # 3) PDRRetriever 생성
+    pdr_config = PDRConfig(
+        parents_index=cfg.parents_index,
+        chunks_index=cfg.chunks_index,
+    )
     pdr = PDRRetriever(
         es_components.searcher,
         es_components.parent_reader,
-        pdr_config or PDRConfig(),
+        pdr_config,
+    )
+
+    # 4) LocalRetrieverService 생성
+    retriever_config = LocalRetrieverConfig(
+        parent_size=cfg.parent_size,
+        parent_sparse_weight=cfg.parent_sparse_weight,
+        parent_dense_weight=cfg.parent_dense_weight,
+        chunk_size=cfg.chunk_size,
+        chunk_sparse_weight=cfg.chunk_sparse_weight,
+        chunk_dense_weight=cfg.chunk_dense_weight,
     )
     service = LocalRetrieverService(
         pdr_retriever=pdr,
@@ -60,24 +81,21 @@ def create_local_retriever(
         config=retriever_config,
     )
 
-    # 4) LangChain Adapter로 감싸서 반환
+    # 5) LangChain Adapter로 감싸서 반환
     return LangChainRetrievalAdapter(service=service, source_name="local_es")
 
 
-def create_websearch_retriever(
-    api_key: str | None = None,
-) -> BaseRetriever:
+def create_websearch_retriever() -> BaseRetriever:
     """
     웹 검색 기반 Retriever를 생성합니다.
 
-    Args:
-        api_key: Tavily API 키 (None이면 env에서 읽음)
+    환경변수에서 TAVILY_API_KEY를 읽습니다.
 
     Returns:
         LangChain BaseRetriever 호환 retriever
     """
-    # 1) WebSearch 클라이언트 생성 (infrastructure)
-    client = create_websearch_client(api_key=api_key)
+    # 1) WebSearch 클라이언트 생성 (infrastructure, env에서 API key 읽음)
+    client = create_websearch_client()
 
     # 2) WebSearchService 생성 (벤더 독립)
     service = WebSearchService(client=client)

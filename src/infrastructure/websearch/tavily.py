@@ -41,16 +41,14 @@ class TavilyClientWrapper:
     def __init__(
         self,
         client: TavilyClient | None = None,
-        api_key: str | None = None,
         default_params: TavilySearchParams | None = None,
     ) -> None:
         """
         Args:
-            client: TavilyClient 인스턴스 (None이면 새로 생성)
-            api_key: API 키 (client가 None일 때 사용)
+            client: TavilyClient 인스턴스 (None이면 TAVILY_API_KEY env로 생성)
             default_params: 기본 검색 파라미터
         """
-        self._client = client or TavilyClient(api_key=api_key)
+        self._client = client or TavilyClient()  # env에서 TAVILY_API_KEY 읽음
         self._default_params = default_params or {}
 
     def search(
