@@ -10,7 +10,7 @@ import logging
 from langchain_core.documents import Document
 from langchain_core.runnables import RunnableLambda
 
-from chains.qa.postprocess import build_context
+from chains.retrieval.context_builder import build_context
 from schemas.reranker import RetrievalResponse
 
 logger = logging.getLogger(__name__)
