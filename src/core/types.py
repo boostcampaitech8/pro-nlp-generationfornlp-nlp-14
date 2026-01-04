@@ -1,7 +1,7 @@
 """검색 관련 공용 타입 정의.
 
-이 모듈은 Elasticsearch나 다른 인프라에 의존하지 않습니다.
-상위 레이어에서 자유롭게 import할 수 있습니다.
+이 모듈은 인프라에 의존하지 않습니다.
+vectorstore, chains, indexing 등 어디서든 import할 수 있습니다.
 """
 
 from __future__ import annotations
@@ -11,7 +11,7 @@ from typing import Any
 
 
 @dataclass
-class SearchHit:
+class DocumentSearchHit:
     """검색 결과 히트."""
 
     id: str
@@ -20,7 +20,7 @@ class SearchHit:
 
 
 @dataclass
-class SearchParams:
+class DocumentSearchParams:
     """일반화된 검색 파라미터.
 
     Dense, Sparse, Hybrid 검색 모두 대응 가능.
@@ -47,7 +47,25 @@ class SearchParams:
     sparse_weight: float = 1.0
     dense_weight: float = 1.0
 
+    # RRF 옵션 (use_rrf=True면 가중치 대신 RRF 사용)
+    use_rrf: bool = False
+    rrf_rank_constant: int = 60  # RRF k 파라미터
+
     # 필드 설정
     text_fields: list[str] = field(default_factory=list)
     vector_field: str | None = None
     source_fields: list[str] | None = None
+
+
+@dataclass
+class WebSearchResult:
+    """웹 검색 결과 단일 항목.
+
+    벤더 독립적인 웹 검색 결과 타입.
+    """
+
+    title: str
+    url: str
+    content: str
+    score: float | None = None
+    raw: dict[str, Any] = field(default_factory=dict)

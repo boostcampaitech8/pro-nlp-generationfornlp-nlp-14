@@ -54,8 +54,8 @@ class ESConfig:
     )
     chunks_index: str = field(default_factory=lambda: os.getenv("ES_CHUNKS_INDEX", "kb_chunks_v1"))
 
-    # Embedding
-    embedding_dims: int = field(default_factory=lambda: int(os.getenv("EMBEDDING_DIMS", "4096")))
+    # Embedding (필수 - EMBEDDING_DIMS 환경변수에서 읽음)
+    embedding_dims: int = field(default_factory=lambda: int(os.environ["EMBEDDING_DIMS"]))
 
     # Backup (write-through 패턴)
     backup_dir: Path = field(default_factory=_get_backup_dir)

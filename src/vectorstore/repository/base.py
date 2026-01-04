@@ -97,6 +97,10 @@ class BaseRepository(ABC, Generic[T]):
                 out[d["_id"]] = d["_source"]
         return out
 
+    def get_documents(self, doc_ids: list[str]) -> dict[str, dict[str, Any]]:
+        """여러 ID로 문서 조회 (DocumentRepositoryProtocol 호환용 alias)."""
+        return self.mget_raw(doc_ids)
+
     def delete(self, doc_id: str, refresh: bool = False) -> None:
         """문서 삭제."""
         self.es.delete(

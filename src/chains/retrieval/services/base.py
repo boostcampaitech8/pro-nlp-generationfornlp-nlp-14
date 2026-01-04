@@ -27,12 +27,12 @@ class RetrievalServicePort(Protocol):
         현재는 search() 메서드만 구현하면 됩니다.
     """
 
-    def search(self, req: RetrievalRequest, **kwargs: Any) -> list[RetrievalResponse]:
+    def search(self, request: RetrievalRequest, **kwargs: Any) -> list[RetrievalResponse]:
         """
         단일 검색 요청 처리.
 
         Args:
-            req: 검색 요청 (query, top_k 포함)
+            request: 검색 요청 (query, top_k 포함)
             **kwargs: 추가 파라미터 (확장 가능)
 
         Returns:

@@ -255,3 +255,47 @@ class PreprocessConfig(BaseConfig):
         "sgkfold_eval_fold": "eval_fold",
         "sgkfold_random_seed": "random_seed",
     }
+
+
+@dataclass
+class RetrievalConfig(BaseConfig):
+    """Retrieval 설정
+
+    configs/config.yaml의 retrieval 섹션에서 설정을 로드함.
+    ES/Embedder 연결 정보는 환경변수에서 읽음 (dotenv).
+    """
+
+    _yaml_sections: ClassVar[list[str]] = ["retrieval"]
+
+    # RRF 설정
+    use_rrf: bool = False
+    rrf_rank_constant: int = 60
+
+    # 인덱스명
+    parents_index: str = "parents"
+    chunks_index: str = "chunks"
+
+    # Parent 검색 설정 (Stage 1)
+    parent_size: int = 10
+    parent_sparse_weight: float = 2.0
+    parent_dense_weight: float = 0.5
+
+    # Chunk 검색 설정 (Stage 2)
+    chunk_size: int = 20
+    chunk_sparse_weight: float = 1.0
+    chunk_dense_weight: float = 2.0
+
+    _yaml_key_mapping: ClassVar[dict[str, str]] = {
+        "use_rrf": "use_rrf",
+        "rrf_rank_constant": "rrf_rank_constant",
+        "parents_index": "parents_index",
+        "chunks_index": "chunks_index",
+        # Parent 검색
+        "parent_size": "parent_size",
+        "parent_sparse_weight": "parent_sparse_weight",
+        "parent_dense_weight": "parent_dense_weight",
+        # Chunk 검색
+        "chunk_size": "chunk_size",
+        "chunk_sparse_weight": "chunk_sparse_weight",
+        "chunk_dense_weight": "chunk_dense_weight",
+    }
