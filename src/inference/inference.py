@@ -14,11 +14,10 @@ from tqdm import tqdm
 
 from chains.core.logging import tap
 from chains.core.state import QuestionState
-from chains.core.utils import round_robin_merge
 from chains.planning import build_planner
 from chains.qa import build_qa_chain
+from chains.reranker import build_reranker, merge_strategies
 from chains.retrieval import build_multi_query_retriever, build_tavily_retriever
-from chains.retrieval.context_builder import build_context
 from data.data_processing import load_and_parse_data
 from prompts import get_prompt_manager
 from prompts.plan.plan import plan_prompt
@@ -51,17 +50,28 @@ def main(config: InferenceConfig):
     )
     planner = build_planner(llm=planner_llm, prompt=plan_prompt)
 
+    #  -------------------------
+    # Reranker 생성
+    # -------------------------
+    reranker = build_reranker(base_url=os.environ["RERANKER_URL"])
+    merger = merge_strategies(
+        strategy_type="query_first",  # 전략 유형: query_first or global_top
+        top_n=config.num_retrieved_docs,
+        max_chars=config.max_retrieval_context_chars,
+    )
+
     # -------------------------
     # 3) retriever chain 생성
     # -------------------------
-    retrieval_chain = RunnableParallel(
-        data=lambda x: x["data"],
-        context=(
-            lambda x: x["plan"]
-            | build_multi_query_retriever(retriever=base_retriever)
-            | round_robin_merge
-            | (lambda docs: build_context(docs, max_chars=config.max_retrieval_context_chars))
-        ),
+    # 리랭커는 원본 데이터(data)와 검색된 문서들(multi_docs)이 모두 필요하므로 구조를 묶어줍니다.
+    retrieval_chain = (
+        RunnableParallel(
+            data=lambda x: x["data"],
+            multi_docs=lambda x: x["plan"] | build_multi_query_retriever(retriever=base_retriever),
+        )
+        | reranker
+        | merger
+        | (lambda res: res.context)
     )
 
     # -------------------------
@@ -86,7 +96,7 @@ def main(config: InferenceConfig):
             (
                 RunnableParallel(data=RunnablePassthrough(), plan=planner)
                 | RunnableLambda(log_plan)
-                | retrieval_chain
+                | retrieval_chain  # 리랭커가 포함된 retrieval_chain 실행
             ),  # retrieval 실행
         ),
         lambda _: "",  # paragraph가 길면 빈 context

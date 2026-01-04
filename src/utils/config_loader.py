@@ -186,6 +186,10 @@ class InferenceConfig(BaseConfig):
     max_paragraph_chars_for_planner: int
     query_plan_log_path: str
 
+    # reranker 설정
+    num_retrieved_docs: int
+    top_k_per_query: int
+
     # Planner LLM 설정
     planner_llm_temperature: float
 
@@ -199,6 +203,8 @@ class InferenceConfig(BaseConfig):
         "pipeline_max_retrieval_context_chars": "max_retrieval_context_chars",
         "pipeline_max_paragraph_chars_for_planner": "max_paragraph_chars_for_planner",
         "pipeline_query_plan_log_path": "query_plan_log_path",
+        "pipeline_num_retrieved_docs": "num_retrieved_docs",
+        "pipeline_top_k_per_query": "top_k_per_query",
         "planner_llm_temperature": "planner_llm_temperature",
     }
 
