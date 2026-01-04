@@ -29,7 +29,7 @@ def _to_jsonable(x: Any) -> Any:
     return x
 
 
-def tap(path: str | Path):
+def tap(path: str | Path, transform=None):
     """
     JSON Line logger (tap pattern).
 
@@ -38,6 +38,7 @@ def tap(path: str | Path):
 
     Args:
         path: 로그 파일 경로
+        transform: 로깅 전에 state를 변환하는 함수 (optional)
 
     Returns:
         Runnable (via @chain decorator)
@@ -46,9 +47,11 @@ def tap(path: str | Path):
         >>> # State 전체 로깅
         >>> chain = planner | tap("log/plans.jsonl")
         >>>
-        >>> # 특정 필드만 로깅
-        >>> extract = RunnableLambda(lambda s: {"id": s["data"]["id"], "plan": s["plan"]})
-        >>> chain = planner | extract | tap("log/plans.jsonl")
+        >>> # 특정 필드만 로깅 (transform 사용)
+        >>> chain = planner | tap(
+        ...     "log/plans.jsonl",
+        ...     transform=lambda s: {"id": s["data"]["id"], "plan": s["plan"]}
+        ... )
     """
     log_file = Path(path)
 
@@ -56,10 +59,12 @@ def tap(path: str | Path):
     def _tap(x: Any) -> Any:
         try:
             log_file.parent.mkdir(parents=True, exist_ok=True)
+            # Transform 적용 (있는 경우)
+            log_data = transform(x) if transform else x
             with log_file.open("a", encoding="utf-8") as f:
-                f.write(json.dumps(_to_jsonable(x), ensure_ascii=False) + "\n")
+                f.write(json.dumps(_to_jsonable(log_data), ensure_ascii=False) + "\n")
         except Exception as e:
             logger.warning(f"Failed to log to {path}: {e}")
-        return x
+        return x  # 원본 state 그대로 반환
 
     return _tap

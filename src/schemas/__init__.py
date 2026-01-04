@@ -1,12 +1,12 @@
-from .augmented_state import AugmentedState
-from .mcq import DecodedContext, ForwardContext, McqRequest, PredRow, ScoreRow
-from .processed_question import ProcessedQuestion
-from .reranker import DocScore, RerankResponse
-from .retrieval import RetrievalPlan, RetrievalRequest, RetrievalResponse
+from schemas.augmented_state import AugmentedState
+from schemas.processed_question import ProcessedQuestion
+from schemas.reranker import DocScore, RerankResponse
+from schemas.mcq import DecodedContext, ForwardContext, McqRequest, PredRow, ScoreRow
+from schemas.question import PreprocessedQuestion
+from schemas.retrieval import RetrievalPlan, RetrievalRequest, RetrievalResponse
 
 __all__ = [
-    "ProcessedQuestion",
-    "AugmentedState",
+    "PreprocessedQuestion",
     "McqRequest",
     "ForwardContext",
     "DecodedContext",

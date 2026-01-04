@@ -17,7 +17,11 @@ def build_local_forward(config):
     def forward(data: dict):
         messages = data["messages"]
         input_ids = tokenizer.apply_chat_template(
-            messages, tokenize=True, add_generation_prompt=True, return_tensors="pt"
+            messages,
+            tokenize=True,
+            add_generation_prompt=True,
+            return_tensors="pt",
+            enable_thinking=config.enable_thinking,
         ).to(device)
         outputs = model(input_ids)
         len_choices = data["len_choices"]

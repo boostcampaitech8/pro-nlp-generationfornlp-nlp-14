@@ -90,6 +90,7 @@ class TrainConfig(BaseConfig):
 
     # 모델 설정
     model_name: str
+    enable_thinking: bool
 
     # 데이터 설정
     train_data: str
@@ -101,6 +102,7 @@ class TrainConfig(BaseConfig):
     output_dir: str
     max_seq_length: int
     batch_size: int
+    gradient_accumulation_steps: int
     epochs: int
     learning_rate: float
     weight_decay: float
@@ -121,6 +123,7 @@ class TrainConfig(BaseConfig):
     _yaml_key_mapping: ClassVar[dict[str, str]] = {
         # train 섹션
         "model_name": "model_name",
+        "model_enable_thinking": "enable_thinking",
         "data_train_path": "train_data",
         "data_eval_path": "eval_data",
         "data_prompt_style": "prompt_style",
@@ -128,6 +131,7 @@ class TrainConfig(BaseConfig):
         "training_output_dir": "output_dir",
         "training_max_seq_length": "max_seq_length",
         "training_batch_size": "batch_size",
+        "training_gradient_accumulation_steps": "gradient_accumulation_steps",
         "training_epochs": "epochs",
         "training_learning_rate": "learning_rate",
         "training_weight_decay": "weight_decay",
@@ -167,6 +171,7 @@ class InferenceConfig(BaseConfig):
 
     # 모델 설정, hf 모델명 또는 체크포인트 경로
     checkpoint_path: str
+    enable_thinking: bool
 
     # 데이터 설정
     test_data: str
@@ -180,6 +185,9 @@ class InferenceConfig(BaseConfig):
 
     # 출력 설정
     output_path: str
+
+    # rag 사용 여부
+    use_rag: bool
 
     # Pipeline 설정
     max_retrieval_context_chars: int
@@ -195,6 +203,7 @@ class InferenceConfig(BaseConfig):
 
     _yaml_key_mapping: ClassVar[dict[str, str]] = {
         "model_checkpoint_path": "checkpoint_path",
+        "model_enable_thinking": "enable_thinking",
         "data_test_path": "test_data",
         "data_prompt_style": "prompt_style",
         "output_path": "output_path",
@@ -206,6 +215,7 @@ class InferenceConfig(BaseConfig):
         "pipeline_num_retrieved_docs": "num_retrieved_docs",
         "pipeline_top_k_per_query": "top_k_per_query",
         "planner_llm_temperature": "planner_llm_temperature",
+        "use_rag": "use_rag",
     }
 
 
