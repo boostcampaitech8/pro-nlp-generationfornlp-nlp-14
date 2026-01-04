@@ -5,6 +5,7 @@ train:
   # 모델 설정
   model:
     name: "unsloth/Qwen2.5-32B-Instruct-bnb-4bit"
+    enable_thinking: false
 
   # 데이터 설정
   data:
@@ -17,7 +18,8 @@ train:
   training:
     output_dir: "outputs"
     max_seq_length: 4096
-    batch_size: 16
+    batch_size: 4
+    gradient_accumulation_steps: 2
     epochs: 3
     learning_rate: 2.0e-5
     weight_decay: 0.01
@@ -38,7 +40,8 @@ train:
 inference:
   # 모델 설정
   model:
-    checkpoint_path: "unsloth/Qwen2.5-32B-Instruct-bnb-4bit" #실제 경로 or Hugging Face 모델명
+    checkpoint_path: "unsloth/Qwen2.5-32B-Instruct-bnb-4bit"   #실제 경로 or Hugging Face 모델명
+    enable_thinking: false
 
   # 데이터 설정
   data:
