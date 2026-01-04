@@ -12,12 +12,11 @@ from langchain_openai import ChatOpenAI
 from tqdm import tqdm
 
 from chains.planning import build_planner
-from chains.qa import build_qa_chain
 from chains.qa.inference.not_think_cot import build_non_think_cot_chain
 from chains.reranker import build_reranker, merge_strategies
 from chains.retrieval import (
     build_multi_query_retriever,
-    create_local_retriever,
+    contents_quality_filter,
     create_websearch_retriever,
 )
 from chains.runnables.conditions import all_conditions, constant_check, is_shorter_than
@@ -66,15 +65,15 @@ def main(inference_config: InferenceConfig, retrieval_config: RetrievalConfig):
     # -------------------------
     # 2) Retriever 생성 (EnsembleRetriever: Local + Web)
     # -------------------------
-    local_retriever = create_local_retriever(config=retrieval_config)
+    # local_retriever = create_local_retriever(config=retrieval_config)
 
     websearch_retriever = create_websearch_retriever()
 
     print(retrieval_config.local_retriever_weight, retrieval_config.web_retriever_weight)
     # EnsembleRetriever로 로컬과 웹 검색 결합 (가중치: local 0.6, web 0.4)
     ensemble_retriever = EnsembleRetriever(
-        retrievers=[local_retriever, websearch_retriever],
-        weights=[retrieval_config.local_retriever_weight, retrieval_config.web_retriever_weight],
+        retrievers=[websearch_retriever],
+        weights=[1],
     )
 
     multi_query_retriever = build_multi_query_retriever(ensemble_retriever)
@@ -100,7 +99,17 @@ def main(inference_config: InferenceConfig, retrieval_config: RetrievalConfig):
                 selector("data")
                 | RunnablePassthrough.assign(plan=planner)
                 | plan_logger  # plan 로그 저장
-                | RunnablePassthrough.assign(multi_docs=selector("plan") | multi_query_retriever)
+                | RunnablePassthrough.assign(
+                    multi_docs=(
+                        selector("plan")
+                        | multi_query_retriever
+                        | contents_quality_filter(
+                            min_length=50,
+                            max_length=8000,
+                            min_korean_ratio=0.1,
+                        )
+                    )
+                )
                 | reranker  # Reranker: list[list[Document]] -> list[list[Document]] (with rerank_score)
                 | merger  # Merger: list[list[Document]] -> RetrievalResponse (with context string)
                 | (lambda response: response.context),
