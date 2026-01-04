@@ -39,3 +39,21 @@ class ParentReaderProtocol(Protocol):
     """
 
     def mget_raw(self, doc_ids: list[str]) -> dict[str, dict[str, Any]]: ...
+
+
+class EmbedderProtocol(Protocol):
+    """텍스트 임베딩 인터페이스.
+
+    텍스트를 벡터로 변환하는 임베더들이 구현해야 할 인터페이스.
+
+    Example:
+        >>> class SolarEmbedder:
+        ...     def embed(self, text: str) -> list[float]:
+        ...         ...  # Solar API 호출
+        ...     def embed_batch(self, texts: list[str]) -> list[list[float]]:
+        ...         ...  # 배치 처리
+    """
+
+    def embed(self, text: str) -> list[float]: ...
+
+    def embed_batch(self, texts: list[str]) -> list[list[float]]: ...
