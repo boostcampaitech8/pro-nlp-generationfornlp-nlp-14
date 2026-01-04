@@ -7,7 +7,7 @@ LangChain Document를 사용하여 service layer와 디커플링합니다.
 
 from langchain_core.documents import Document
 from langchain_core.retrievers import BaseRetriever
-from langchain_core.runnables import chain
+from langchain_core.runnables import Runnable, chain
 
 from chains.utils.utils import normalize_request
 from schemas.retrieval import RetrievalPlan
@@ -15,7 +15,7 @@ from schemas.retrieval import RetrievalPlan
 
 def build_multi_query_retriever(
     retriever: BaseRetriever,
-) -> chain:
+) -> Runnable[RetrievalPlan, list[list[Document]]]:
     """
     Multi-query retrieval chain 생성.
 

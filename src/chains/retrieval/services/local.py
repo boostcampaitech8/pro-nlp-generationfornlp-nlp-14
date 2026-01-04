@@ -88,7 +88,11 @@ class LocalRetrieverService(RetrievalServicePort):
                 sparse_weight=self._config.parent_sparse_weight,
                 dense_weight=self._config.parent_dense_weight,
             )
-            doc_ids = [h.source.get("doc_id") for h in parent_hits if h.source.get("doc_id")]
+            doc_ids = [
+                str(h.source.get("doc_id"))
+                for h in parent_hits
+                if h.source.get("doc_id") is not None
+            ]
 
         # 3) Stage 2: Chunk 검색
         chunk_hits = self._pdr.search_chunks(
