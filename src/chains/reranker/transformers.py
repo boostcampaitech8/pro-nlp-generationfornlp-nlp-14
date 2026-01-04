@@ -1,3 +1,14 @@
+"""
+Reranker 데이터 변환 및 유틸리티 모듈.
+
+이 모듈은 리랭커(Reranker) 체인의 전후 처리 로직을 담당합니다.
+주요 기능:
+1. 입력 데이터의 유효성 검증 (Question, Documents 유무 확인)
+2. 원본 문제(질문 및 선택지)를 결합하여 리랭킹 전용 'Rich Query' 생성
+3. 모델의 토큰 입력 제한을 고려한 텍스트 절단(Truncation)
+4. 리랭킹 결과(점수 및 순위)에 대한 로깅 및 모니터링
+"""
+
 import logging
 from typing import Any
 

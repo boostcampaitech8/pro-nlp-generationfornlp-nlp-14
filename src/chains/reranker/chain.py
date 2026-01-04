@@ -1,3 +1,17 @@
+"""
+Reranker 실행 체인 모듈.
+
+이 모듈은 외부 Reranker API(BGE-Reranker 등)와 통신하여 리트리버가 검색한 문서들의
+우선순위를 재조정합니다. 검색 쿼리가 아닌 원본 문제 데이터(질문+선택지)를 기준으로
+채점을 수행하여, 실제 정답 단서가 포함된 문서가 상단에 배치되도록 합니다.
+
+주요 로직:
+1. Multi-Query로 검색된 문서 그룹(List[List[Document]]) 수신
+2. 원본 데이터를 활용한 Rich Query 생성 및 API 호출
+3. API 응답 점수를 각 Document의 metadata['rerank_score']에 주입
+4. 각 그룹 내 문서들을 점수 순으로 재정렬하여 반환
+"""
+
 import logging
 from typing import Any
 
