@@ -12,12 +12,10 @@ Reranker 데이터 변환 및 유틸리티 모듈.
 import logging
 from typing import Any
 
-from langchain_core.documents import Document
-
 logger = logging.getLogger(__name__)
 
 
-def truncate_text(text: str, max_chars: int = 1000) -> str:
+def truncate_text(text: str, max_chars: int = 200) -> str:
     """
     리랭커 모델의 입력 제한을 고려하여 텍스트 길이를 제한합니다.
     질문(Question)이나 선택지(Choice)가 너무 길 경우 모델 에러를 방지합니다.
@@ -56,13 +54,12 @@ def format_rich_query(original_data: dict[str, Any]) -> str:
     return truncate_text(query, max_chars=1500)
 
 
-def log_rerank_results(reranked_results: list[list[Document]]):
-    """
-    리랭킹 완료 후 각 그룹의 최상단 문서 점수를 로그로 출력합니다.
-    """
-    for i, group in enumerate(reranked_results):
-        if group:
-            top_score = group[0].metadata.get("rerank_score", 0.0)
-            logger.info(f"Group {i} Reranked - Top Score: {top_score:.4f}, Count: {len(group)}")
+def log_rerank_results(reranked_results: list[Any]):
+    for i, res_obj in enumerate(reranked_results):
+        # QueryResult 객체인지 확인 (documents 속성이 있는지)
+        docs = getattr(res_obj, "documents", [])
+        if docs and hasattr(docs[0], "metadata"):
+            top_score = docs[0].metadata.get("rerank_score", 0.0)
+            logger.info(f"Query {i} Reranked - Top Score: {top_score:.4f}, Count: {len(docs)}")
         else:
-            logger.warning(f"Group {i} has no documents after retrieval.")
+            logger.warning(f"Query {i} has no ranked documents.")

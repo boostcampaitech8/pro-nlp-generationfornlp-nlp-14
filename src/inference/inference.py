@@ -66,8 +66,9 @@ def main(config: InferenceConfig):
     # 리랭커는 원본 데이터(data)와 검색된 문서들(multi_docs)이 모두 필요하므로 구조를 묶어줍니다.
     retrieval_chain = (
         RunnableParallel(
-            data=lambda x: x["data"],
-            multi_docs=lambda x: x["plan"] | build_multi_query_retriever(retriever=base_retriever),
+            data=RunnableLambda(lambda x: x["data"]),
+            multi_docs=RunnableLambda(lambda x: x["plan"])
+            | build_multi_query_retriever(retriever=base_retriever),
         )
         | reranker
         | merger
