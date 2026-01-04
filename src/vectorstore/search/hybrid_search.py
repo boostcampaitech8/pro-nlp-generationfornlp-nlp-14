@@ -9,7 +9,7 @@ from typing import Any
 
 from elasticsearch import Elasticsearch
 
-from core.types import SearchHit, SearchParams
+from core.types import DocumentSearchHit, DocumentSearchParams
 from vectorstore.config import ESConfig
 
 
@@ -80,7 +80,7 @@ class HybridSearcher:
 
         return {"linear": {"retrievers": retrievers, "rank_window_size": rank_window_size}}
 
-    def search(self, *, index: str, params: SearchParams) -> list[SearchHit]:
+    def search(self, *, index: str, params: DocumentSearchParams) -> list[DocumentSearchHit]:
         """하이브리드 검색 수행.
 
         SearcherProtocol 구현. PDRRetriever 등에서 직접 사용 가능.
@@ -115,6 +115,6 @@ class HybridSearcher:
         resp = self.es.search(**search_kwargs)
 
         return [
-            SearchHit(id=h["_id"], score=h["_score"], source=h["_source"])
+            DocumentSearchHit(id=h["_id"], score=h["_score"], source=h["_source"])
             for h in resp["hits"]["hits"]
         ]

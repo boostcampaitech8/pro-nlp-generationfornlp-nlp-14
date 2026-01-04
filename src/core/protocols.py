@@ -11,10 +11,10 @@ from __future__ import annotations
 
 from typing import Any, Protocol
 
-from core.types import SearchHit, SearchParams, WebSearchResult
+from core.types import DocumentSearchHit, DocumentSearchParams, WebSearchResult
 
 
-class SearcherProtocol(Protocol):
+class DocumentSearcherProtocol(Protocol):
     """검색기 인터페이스.
 
     Dense, Sparse, Hybrid 검색 모두 이 인터페이스를 구현할 수 있음.
@@ -29,16 +29,16 @@ class SearcherProtocol(Protocol):
         ...         ...  # kNN 전용 검색
     """
 
-    def search(self, *, index: str, params: SearchParams) -> list[SearchHit]: ...
+    def search(self, *, index: str, params: DocumentSearchParams) -> list[DocumentSearchHit]: ...
 
 
-class ParentReaderProtocol(Protocol):
+class DocumentRepositoryProtocol(Protocol):
     """Parent 문서 읽기 인터페이스.
 
     PDR 검색에서 Chunk → Parent 컨텍스트 조회에 사용.
     """
 
-    def mget_raw(self, doc_ids: list[str]) -> dict[str, dict[str, Any]]: ...
+    def get_documents(self, doc_ids: list[str]) -> dict[str, dict[str, Any]]: ...
 
 
 class EmbedderProtocol(Protocol):

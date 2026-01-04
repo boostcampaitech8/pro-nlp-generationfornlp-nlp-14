@@ -17,8 +17,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from core.protocols import ParentReaderProtocol, SearcherProtocol
-from core.types import SearchHit, SearchParams
+from core.protocols import DocumentRepositoryProtocol, DocumentSearcherProtocol
+from core.types import DocumentSearchHit, DocumentSearchParams
 
 
 @dataclass
@@ -42,8 +42,8 @@ class PDRRetriever:
 
     def __init__(
         self,
-        searcher: SearcherProtocol,
-        parent_reader: ParentReaderProtocol,
+        searcher: DocumentSearcherProtocol,
+        parent_reader: DocumentRepositoryProtocol,
         config: PDRConfig | None = None,
     ):
         self._searcher = searcher
@@ -63,7 +63,7 @@ class PDRRetriever:
         size: int = 20,
         sparse_weight: float = 2.0,
         dense_weight: float = 0.5,
-    ) -> list[SearchHit]:
+    ) -> list[DocumentSearchHit]:
         """Parent 레벨 하이브리드 검색.
 
         토픽/지문 후보를 찾는 1단계 검색. BM25 비중을 높게 설정.
@@ -81,7 +81,7 @@ class PDRRetriever:
         """
         filter_q = {"term": {"subject": subject}} if subject else None
 
-        params = SearchParams(
+        params = DocumentSearchParams(
             query=query,
             query_vector=query_vector,
             size=size,
@@ -109,7 +109,7 @@ class PDRRetriever:
         size: int = 30,
         sparse_weight: float = 1.0,
         dense_weight: float = 2.0,
-    ) -> list[SearchHit]:
+    ) -> list[DocumentSearchHit]:
         """Chunk 레벨 하이브리드 검색.
 
         세부 컨텍스트를 찾는 2단계 검색. kNN 비중을 높게 설정.
@@ -138,7 +138,7 @@ class PDRRetriever:
         elif len(filters) > 1:
             filter_q = {"bool": {"filter": filters}}
 
-        params = SearchParams(
+        params = DocumentSearchParams(
             query=query,
             query_vector=query_vector,
             size=size,
@@ -166,7 +166,9 @@ class PDRRetriever:
     # PDR: Chunk -> Parent Context Fetch (읽기 전용)
     # =========================================================================
 
-    def fetch_parent_contexts(self, chunk_hits: list[SearchHit]) -> dict[str, dict[str, Any]]:
+    def fetch_parent_contexts(
+        self, chunk_hits: list[DocumentSearchHit]
+    ) -> dict[str, dict[str, Any]]:
         """Chunk 검색 결과로부터 Parent 컨텍스트 조회.
 
         Args:
@@ -176,8 +178,8 @@ class PDRRetriever:
             {doc_id: parent_source} 형태의 딕셔너리
         """
         doc_ids = sorted({h.source["doc_id"] for h in chunk_hits if "doc_id" in h.source})
-        return self._parent_reader.mget_raw(doc_ids)
+        return self._parent_reader.get_documents(doc_ids)
 
     def mget_parents(self, doc_ids: list[str]) -> dict[str, dict[str, Any]]:
         """여러 Parent 문서 조회 (raw dict 반환)."""
-        return self._parent_reader.mget_raw(doc_ids)
+        return self._parent_reader.get_documents(doc_ids)

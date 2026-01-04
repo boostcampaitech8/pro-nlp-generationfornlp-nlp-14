@@ -11,7 +11,7 @@ from typing import Any
 
 
 @dataclass
-class SearchHit:
+class DocumentSearchHit:
     """검색 결과 히트."""
 
     id: str
@@ -20,7 +20,7 @@ class SearchHit:
 
 
 @dataclass
-class SearchParams:
+class DocumentSearchParams:
     """일반화된 검색 파라미터.
 
     Dense, Sparse, Hybrid 검색 모두 대응 가능.

@@ -12,7 +12,6 @@ from core.protocols import EmbedderProtocol, WebSearchClientProtocol
 from infrastructure.embedders import SolarEmbedder, SolarEmbedderConfig
 from infrastructure.websearch import TavilyClientWrapper, TavilySearchParams
 
-
 # 웹 검색에서 제외할 도메인 기본값
 DEFAULT_WEBSEARCH_EXCLUDE_DOMAINS: Sequence[str] = (
     "reddit.com",

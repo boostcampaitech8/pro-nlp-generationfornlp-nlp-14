@@ -5,21 +5,21 @@ vectorstore, chains, indexing 등 어디서든 import할 수 있습니다.
 """
 
 from core.protocols import (
+    DocumentRepositoryProtocol,
+    DocumentSearcherProtocol,
     EmbedderProtocol,
-    ParentReaderProtocol,
-    SearcherProtocol,
     WebSearchClientProtocol,
 )
-from core.types import SearchHit, SearchParams, WebSearchResult
+from core.types import DocumentSearchHit, DocumentSearchParams, WebSearchResult
 
 __all__ = [
     # Types
-    "SearchHit",
-    "SearchParams",
+    "DocumentSearchHit",
+    "DocumentSearchParams",
     "WebSearchResult",
     # Protocols
     "EmbedderProtocol",
-    "SearcherProtocol",
-    "ParentReaderProtocol",
+    "DocumentSearcherProtocol",
+    "DocumentRepositoryProtocol",
     "WebSearchClientProtocol",
 ]

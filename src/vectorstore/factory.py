@@ -10,7 +10,7 @@ from dataclasses import dataclass
 
 from elasticsearch import Elasticsearch
 
-from core.protocols import ParentReaderProtocol, SearcherProtocol
+from core.protocols import DocumentRepositoryProtocol, DocumentSearcherProtocol
 from vectorstore.client import create_es_client
 from vectorstore.config import ESConfig
 from vectorstore.repository import ParentRepository
@@ -22,8 +22,8 @@ class ESComponents:
     """Elasticsearch 관련 컴포넌트 묶음."""
 
     es: Elasticsearch
-    searcher: SearcherProtocol
-    parent_reader: ParentReaderProtocol
+    searcher: DocumentSearcherProtocol
+    parent_reader: DocumentRepositoryProtocol
 
 
 def create_es_components(
