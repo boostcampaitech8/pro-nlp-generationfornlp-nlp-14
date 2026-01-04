@@ -13,7 +13,6 @@ from typing import Any
 from chains.retrieval.domain.pdr_retriever import PDRRetriever
 from chains.retrieval.services.base import RetrievalServicePort
 from core.protocols import EmbedderProtocol
-from core.types import SearchHit
 from schemas.retrieval.plan import RetrievalRequest
 from schemas.retrieval.response import RetrievalResponse
 
@@ -31,44 +30,6 @@ class LocalRetrieverConfig:
     chunk_size: int = 20
     chunk_sparse_weight: float = 1.0
     chunk_dense_weight: float = 2.0
-
-    # 결과 포맷 설정
-    include_parent_context: bool = True
-
-
-def _format_chunk_context(
-    chunk: SearchHit,
-    parent_context: dict[str, Any] | None = None,
-) -> str:
-    """Chunk를 context 문자열로 포맷팅.
-
-    Args:
-        chunk: SearchHit 객체 (source 속성 포함)
-        parent_context: Parent 문서 정보 (optional)
-
-    Returns:
-        포맷된 context 문자열
-    """
-    source = chunk.source
-    parts: list[str] = []
-
-    # Topic (from parent or chunk)
-    topic = source.get("topic", "")
-    if topic:
-        parts.append(f"[TOPIC] {topic}")
-
-    # Parent context (전체 지문)
-    if parent_context:
-        parent_text = parent_context.get("parent_text", "")
-        if parent_text:
-            parts.append(f"[PASSAGE]\n{parent_text}")
-
-    # Chunk text
-    chunk_text = source.get("chunk_text", "")
-    if chunk_text:
-        parts.append(f"[CHUNK]\n{chunk_text}")
-
-    return "\n\n".join(parts).strip()
 
 
 class LocalRetrieverService(RetrievalServicePort):
@@ -140,26 +101,30 @@ class LocalRetrieverService(RetrievalServicePort):
             dense_weight=self._config.chunk_dense_weight,
         )
 
-        # 4) Parent context 조회 (optional)
-        parent_contexts: dict[str, dict[str, Any]] = {}
-        if self._config.include_parent_context and chunk_hits:
-            parent_contexts = self._pdr.fetch_parent_contexts(chunk_hits)
+        # 4) Parent context 조회 (PDR: chunk로 검색, parent만 반환)
+        parent_contexts = self._pdr.fetch_parent_contexts(chunk_hits) if chunk_hits else {}
 
-        # 5) 결과 변환
+        # 5) 결과 변환 (parent 기준 deduplicate)
+        seen_doc_ids: set[str] = set()
         results: list[RetrievalResponse] = []
-        for rank, chunk in enumerate(chunk_hits[:top_k], start=1):
-            doc_id = chunk.source.get("doc_id", "")
-            parent_ctx = parent_contexts.get(doc_id)
 
-            context = _format_chunk_context(chunk, parent_ctx)
+        for chunk in chunk_hits:
+            doc_id = chunk.source.get("doc_id", "")
+
+            # 같은 parent는 한 번만 반환
+            if doc_id in seen_doc_ids:
+                continue
+            seen_doc_ids.add(doc_id)
+
+            parent_ctx = parent_contexts.get(doc_id, {})
+            context = parent_ctx.get("parent_text", "")
 
             metadata = {
-                "chunk_id": chunk.source.get("chunk_id"),
                 "doc_id": doc_id,
                 "subject": chunk.source.get("subject"),
                 "topic": chunk.source.get("topic"),
                 "score": chunk.score,
-                "rank": rank,
+                "rank": len(results) + 1,
                 "source": "local_es",
             }
 
@@ -170,5 +135,8 @@ class LocalRetrieverService(RetrievalServicePort):
                     metadata=metadata,
                 )
             )
+
+            if len(results) >= top_k:
+                break
 
         return results
