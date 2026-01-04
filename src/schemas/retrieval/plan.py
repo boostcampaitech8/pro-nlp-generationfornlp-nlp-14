@@ -1,10 +1,9 @@
-from dataclasses import dataclass, field
+from pydantic import BaseModel, Field
 
 from schemas.retrieval.request import RetrievalRequest
 
 
-@dataclass
-class RetrievalPlan:
+class RetrievalPlan(BaseModel):
     """
     검색할 쿼리를 얻기위해 LLM을 이용해 검색쿼리를 증강하기 위한 structed output schema 입니다
     - Request[RetrievealResponse]: {
@@ -13,4 +12,4 @@ class RetrievalPlan:
     }
     """
 
-    requests: list[RetrievalRequest] = field(default_factory=list)
+    requests: list[RetrievalRequest] = Field(default_factory=list)
