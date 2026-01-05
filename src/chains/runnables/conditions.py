@@ -79,3 +79,36 @@ def constant_check(value: bool):
         return value
 
     return _check
+
+
+def is_subject_equal(*keys, subject: str):
+    """
+    State에서 plan.subject를 가져와 특정 값과 비교하는 팩토리 함수.
+
+    Args:
+        *keys: state에서 plan을 가져올 키들 (중첩 가능, 기본: "plan")
+        subject: 비교할 subject 값
+
+    Returns:
+        Chain function that returns bool
+
+    Example:
+        >>> is_subject_equal("plan", subject="한국사")
+        >>> is_subject_equal(subject="정치와 법")  # defaults to "plan" key
+    """
+
+    @chain
+    def _check(state) -> bool:
+        # keys가 없으면 기본적으로 "plan" 사용
+        search_keys = keys if keys else ("plan",)
+
+        value = state
+        for key in search_keys:
+            value = value.get(key) if isinstance(value, dict) else None
+            if value is None:
+                return False
+
+        # value가 RetrievalPlan 객체인 경우 subject 속성 확인
+        return hasattr(value, "subject") and value.subject == subject
+
+    return _check

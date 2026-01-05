@@ -20,7 +20,12 @@ from chains.retrieval import (
     create_local_retriever,
     create_websearch_retriever,
 )
-from chains.runnables.conditions import all_conditions, constant_check, is_shorter_than
+from chains.runnables.conditions import (
+    all_conditions,
+    constant_check,
+    is_shorter_than,
+    is_subject_equal,
+)
 from chains.runnables.logging import tap
 from chains.runnables.selectors import constant, selector
 from data.data_processing import load_and_parse_data
@@ -77,7 +82,9 @@ def main(inference_config: InferenceConfig, retrieval_config: RetrievalConfig):
         weights=[retrieval_config.web_retriever_weight, retrieval_config.local_retriever_weight],
     )
 
-    multi_query_retriever = build_multi_query_retriever(ensemble_retriever)
+    # 각 subject별로 다른 retriever를 multi_query_retriever로 래핑
+    multi_query_ensemble = build_multi_query_retriever(ensemble_retriever)  # 한국사용
+    multi_query_websearch = build_multi_query_retriever(websearch_retriever)  # 정치와법용
 
     # -------------------------
     # 3) Augmentation chain (조건부: paragraph 짧고 RAG 사용 시에만 planning → retrieval → context)
@@ -101,14 +108,31 @@ def main(inference_config: InferenceConfig, retrieval_config: RetrievalConfig):
                 | RunnablePassthrough.assign(plan=planner)
                 | plan_logger  # plan 로그 저장
                 | RunnablePassthrough.assign(
-                    multi_docs=(
+                    multi_docs=RunnableBranch(
+                        # subject가 'general'이면 retrieval 스킵
+                        (
+                            is_subject_equal(subject="general"),
+                            constant([]),  # 빈 documents
+                        ),
+                        # subject가 '정치와 법'이면 웹서치만
+                        (
+                            is_subject_equal(subject="정치와 법"),
+                            selector("plan")
+                            | multi_query_websearch
+                            | contents_quality_filter(
+                                min_length=50,
+                                max_length=8000,
+                                min_korean_ratio=0.1,
+                            ),
+                        ),
+                        # 그 외(한국사 등)는 ensemble
                         selector("plan")
-                        | multi_query_retriever
+                        | multi_query_ensemble
                         | contents_quality_filter(
                             min_length=50,
                             max_length=8000,
                             min_korean_ratio=0.1,
-                        )
+                        ),
                     )
                 )
                 | reranker  # Reranker: list[list[Document]] -> list[list[Document]] (with rerank_score)
