@@ -268,26 +268,26 @@ class RetrievalConfig(BaseConfig):
     _yaml_sections: ClassVar[list[str]] = ["retrieval"]
 
     # RRF 설정
-    use_rrf: bool = False
-    rrf_rank_constant: int = 60
+    use_rrf: bool
+    rrf_rank_constant: int
 
     # 인덱스명
-    parents_index: str = "parents"
-    chunks_index: str = "chunks"
+    parents_index: str
+    chunks_index: str
 
     # Parent 검색 설정 (Stage 1)
-    parent_size: int = 10
-    parent_sparse_weight: float = 2.0
-    parent_dense_weight: float = 0.5
+    parent_size: int
+    parent_sparse_weight: float
+    parent_dense_weight: float
 
     # Chunk 검색 설정 (Stage 2)
-    chunk_size: int = 20
-    chunk_sparse_weight: float = 1.0
-    chunk_dense_weight: float = 2.0
+    chunk_size: int
+    chunk_sparse_weight: float
+    chunk_dense_weight: float
 
     # 웹서치/로컬 가중치 (EnsembleRetriever)
-    local_retriever_weight: float = 0.5
-    web_retriever_weight: float = 0.5
+    local_retriever_weight: float
+    web_retriever_weight: float
 
     _yaml_key_mapping: ClassVar[dict[str, str]] = {
         "use_rrf": "use_rrf",

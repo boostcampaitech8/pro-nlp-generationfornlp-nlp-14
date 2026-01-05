@@ -17,6 +17,7 @@ from chains.reranker import build_reranker, merge_strategies
 from chains.retrieval import (
     build_multi_query_retriever,
     contents_quality_filter,
+    create_local_retriever,
     create_websearch_retriever,
 )
 from chains.runnables.conditions import all_conditions, constant_check, is_shorter_than
@@ -65,15 +66,15 @@ def main(inference_config: InferenceConfig, retrieval_config: RetrievalConfig):
     # -------------------------
     # 2) Retriever 생성 (EnsembleRetriever: Local + Web)
     # -------------------------
-    # local_retriever = create_local_retriever(config=retrieval_config)
+    local_retriever = create_local_retriever(config=retrieval_config)
 
     websearch_retriever = create_websearch_retriever()
 
     print(retrieval_config.local_retriever_weight, retrieval_config.web_retriever_weight)
     # EnsembleRetriever로 로컬과 웹 검색 결합 (가중치: local 0.6, web 0.4)
     ensemble_retriever = EnsembleRetriever(
-        retrievers=[websearch_retriever],
-        weights=[1],
+        retrievers=[websearch_retriever, local_retriever],
+        weights=[retrieval_config.web_retriever_weight, retrieval_config.local_retriever_weight],
     )
 
     multi_query_retriever = build_multi_query_retriever(ensemble_retriever)
