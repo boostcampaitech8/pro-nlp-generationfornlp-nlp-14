@@ -76,19 +76,19 @@ def _build_non_think_cot_forward() -> Runnable[McqRequest, dict]:
         len_choices = data["len_choices"]
 
         # 답변 범위 검증 (1 ~ len_choices)
+        scores = [0.0] * len_choices
+
         if pred < 1 or pred > len_choices:
             logger.warning(
                 f"Invalid answer {pred} for question {data['id']} "
-                f"(valid range: 1-{len_choices}). Defaulting to 1."
+                f"(valid range: 1-{len_choices}). Setting all scores to 0."
             )
-            pred = 1
+            pred = 0
+            # scores는 이미 모두 0.0으로 초기화됨
+        else:
+            scores[pred - 1] = 1.0
 
-        # 0-based 인덱스 변환 및 score 설정
-        scores = [0.0] * len_choices
-        pred_idx = pred - 1
-        scores[pred_idx] = 1.0
-
-        return {"data": data, "score": scores, "pred": str(pred)}
+        return {"data": data, "score": scores, "pred": pred}
 
     return forward
 
