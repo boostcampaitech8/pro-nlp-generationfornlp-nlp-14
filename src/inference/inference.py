@@ -75,7 +75,6 @@ def main(inference_config: InferenceConfig, retrieval_config: RetrievalConfig):
 
     websearch_retriever = create_websearch_retriever()
 
-    print(retrieval_config.local_retriever_weight, retrieval_config.web_retriever_weight)
     # EnsembleRetriever로 로컬과 웹 검색 결합 (가중치: local 0.6, web 0.4)
     ensemble_retriever = EnsembleRetriever(
         retrievers=[websearch_retriever, local_retriever],
