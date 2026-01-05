@@ -12,10 +12,11 @@ Reranker 실행 체인 모듈.
 4. 각 그룹 내 문서들을 점수 순으로 재정렬하여 반환
 """
 
+import asyncio
 import logging
 from typing import Any
 
-import requests
+import aiohttp
 from langchain_core.documents import Document
 from langchain_core.runnables import RunnableConfig, RunnableLambda
 
@@ -37,35 +38,38 @@ def build_reranker(base_url: str) -> RunnableLambda:
         base_url: BGE-Reranker 서버 주소
     """
 
-    def _execute_rerank(
+    async def _execute_rerank_async(
         data: dict[str, Any], config: RunnableConfig = None
     ) -> list[list[Document]]:
+        """비동기 리랭킹 - 모든 query group을 병렬 처리"""
         if not validate_rerank_input(data):
             return data.get("multi_docs", [])
 
         multi_docs: list[list[Document]] = data.get("multi_docs", [])
         rich_query = format_rich_query(data)
 
-        for i, docs in enumerate(multi_docs):
+        async def rerank_one_group(i: int, docs: list[Document]):
+            """단일 그룹의 문서들을 리랭킹"""
             if not docs:
-                continue
+                return i, docs
 
             try:
                 doc_contents = [d.page_content for d in docs]
 
-                response = requests.post(
-                    f"{base_url.rstrip('/')}/v1/rerank",
-                    json={
-                        "model": "bge-reranker-v2-m3",
-                        "query": rich_query,
-                        "documents": doc_contents,
-                        "top_n": len(docs),
-                    },
-                    timeout=30,
-                )
-                response.raise_for_status()
-                res_json = response.json()
-                api_results = res_json.get("data", res_json.get("results", []))
+                async with aiohttp.ClientSession() as session:
+                    async with session.post(
+                        f"{base_url.rstrip('/')}/v1/rerank",
+                        json={
+                            "model": "bge-reranker-v2-m3",
+                            "query": rich_query,
+                            "documents": doc_contents,
+                            "top_n": len(docs),
+                        },
+                        timeout=aiohttp.ClientTimeout(total=30),
+                    ) as response:
+                        response.raise_for_status()
+                        res_json = await response.json()
+                        api_results = res_json.get("data", res_json.get("results", []))
 
                 # 점수 주입 및 재정렬
                 scored_docs = []
@@ -76,13 +80,33 @@ def build_reranker(base_url: str) -> RunnableLambda:
                         doc.metadata["rerank_score"] = item.get("relevance_score", 0.0)
                         scored_docs.append(doc)
 
-                multi_docs[i] = scored_docs
+                return i, scored_docs
 
             except Exception as e:
                 logger.error(f"Reranking for query group {i} failed: {e}")
+                return i, docs
+
+        # 모든 그룹을 병렬로 리랭킹
+        tasks = [rerank_one_group(i, docs) for i, docs in enumerate(multi_docs)]
+        results = await asyncio.gather(*tasks)
+
+        # 결과를 원래 순서대로 재배치
+        for i, scored_docs in results:
+            multi_docs[i] = scored_docs
 
         log_rerank_results(multi_docs)
-
         return multi_docs
 
-    return RunnableLambda(_execute_rerank, name="reranker")
+    def _execute_rerank(
+        data: dict[str, Any], config: RunnableConfig = None
+    ) -> list[list[Document]]:
+        """동기 wrapper - run_in_executor 패턴"""
+        try:
+            loop = asyncio.get_event_loop()
+        except RuntimeError:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+
+        return loop.run_until_complete(_execute_rerank_async(data, config))
+
+    return RunnableLambda(_execute_rerank, afunc=_execute_rerank_async, name="reranker")
