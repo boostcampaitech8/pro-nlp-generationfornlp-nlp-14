@@ -3,6 +3,7 @@ import sys
 
 import pandas as pd
 from dotenv import load_dotenv
+from langchain_classic.retrievers.ensemble import EnsembleRetriever
 from langchain_core.runnables import (
     RunnableBranch,
     RunnablePassthrough,
@@ -11,30 +12,39 @@ from langchain_openai import ChatOpenAI
 from tqdm import tqdm
 
 from chains.planning import build_planner
-from chains.qa import build_qa_chain
+from chains.qa.inference.not_think_cot import build_non_think_cot_chain
 from chains.reranker import build_reranker, merge_strategies
-from chains.retrieval import build_multi_query_retriever, build_tavily_retriever
-from chains.retrieval.context_builder import build_context
-from chains.runnables.conditions import all_conditions, constant_check, is_shorter_than
+from chains.retrieval import (
+    build_multi_query_retriever,
+    contents_quality_filter,
+    create_local_retriever,
+    create_websearch_retriever,
+)
+from chains.runnables.conditions import (
+    all_conditions,
+    constant_check,
+    is_shorter_than,
+    is_subject_equal,
+)
 from chains.runnables.logging import tap
 from chains.runnables.selectors import constant, selector
-from chains.utils.utils import round_robin_merge
 from data.data_processing import load_and_parse_data
 from prompts import get_prompt_manager
 from prompts.plan.plan import plan_prompt
 from schemas.mcq.rows import PredRow, ScoreRow
 from schemas.question import PreprocessedQuestion
 from utils import InferenceConfig
+from utils.config_loader import RetrievalConfig
 
 
-def main(config: InferenceConfig):
+def main(inference_config: InferenceConfig, retrieval_config: RetrievalConfig):
     """추론 메인 함수
     Args:
         config: 추론 설정 객체
     """
     # 테스트 데이터 로드 및 전처리
-    test_df = load_and_parse_data(config.test_data)
-    prompt_manager = get_prompt_manager(config.prompt_style)
+    test_df = load_and_parse_data(inference_config.test_data)
+    prompt_manager = get_prompt_manager(inference_config.prompt_style)
 
     # -------------------------
     # 1) Planner 생성
@@ -44,7 +54,7 @@ def main(config: InferenceConfig):
         api_key="API_KEY_NOT_NEED",  # type: ignore
         name="Planner_Model",
         model="LLama_cpp_model",
-        temperature=config.planner_llm_temperature,
+        temperature=inference_config.planner_llm_temperature,
     )
     planner = build_planner(llm=planner_llm, prompt=plan_prompt)
 
@@ -54,20 +64,32 @@ def main(config: InferenceConfig):
     reranker = build_reranker(base_url=os.environ["RERANKER_URL"])
     merger = merge_strategies(
         strategy_type="query_first",  # 전략 유형: query_first or global_top
-        top_n=config.num_retrieved_docs,
-        max_chars=config.max_retrieval_context_chars,
+        top_n=inference_config.num_retrieved_docs,
+        max_chars=inference_config.max_retrieval_context_chars,
     )
 
     # -------------------------
-    # 2) Retriever 생성
+    # 2) Retriever 생성 (EnsembleRetriever: Local + Web)
     # -------------------------
-    retriever = build_multi_query_retriever(build_tavily_retriever())
+    local_retriever = create_local_retriever(config=retrieval_config)
+
+    websearch_retriever = create_websearch_retriever()
+
+    # EnsembleRetriever로 로컬과 웹 검색 결합 (가중치: local 0.6, web 0.4)
+    ensemble_retriever = EnsembleRetriever(
+        retrievers=[websearch_retriever, local_retriever],
+        weights=[retrieval_config.web_retriever_weight, retrieval_config.local_retriever_weight],
+    )
+
+    # 각 subject별로 다른 retriever를 multi_query_retriever로 래핑
+    multi_query_ensemble = build_multi_query_retriever(ensemble_retriever)  # 한국사용
+    multi_query_websearch = build_multi_query_retriever(websearch_retriever)  # 정치와법용
 
     # -------------------------
     # 3) Augmentation chain (조건부: paragraph 짧고 RAG 사용 시에만 planning → retrieval → context)
     # -------------------------
     plan_logger = tap(
-        config.query_plan_log_path, lambda x: {"id": x["data"]["id"], "plan": x["plan"]}
+        inference_config.query_plan_log_path, lambda x: {"id": x["data"]["id"], "plan": x["plan"]}
     )
 
     augmentation_chain = RunnablePassthrough.assign(
@@ -75,18 +97,46 @@ def main(config: InferenceConfig):
             (
                 all_conditions(
                     is_shorter_than(
-                        "data", "paragraph", max_chars=config.max_paragraph_chars_for_planner
+                        "data",
+                        "paragraph",
+                        max_chars=inference_config.max_paragraph_chars_for_planner,
                     ),
-                    constant_check(config.use_rag),
+                    constant_check(inference_config.use_rag),
                 ),  # paragraph가 짧고 RAG 사용 시에만 planner + retrieval 실행
                 selector("data")
                 | RunnablePassthrough.assign(plan=planner)
                 | plan_logger  # plan 로그 저장
-                | selector("plan")
-                | retriever  # 리랭커도입시 | RunnablePassthrough.assign(docs=selector("plan") | retriever)
-                # 리랭커 삽입 지점: | reranker
-                | round_robin_merge  # will be replaced merge strategy
-                | (lambda docs: build_context(docs, max_chars=config.max_retrieval_context_chars)),
+                | RunnablePassthrough.assign(
+                    multi_docs=RunnableBranch(
+                        # subject가 'general'이면 retrieval 스킵
+                        (
+                            is_subject_equal(subject="general"),
+                            constant([]),  # 빈 documents
+                        ),
+                        # subject가 '정치와 법'이면 웹서치만
+                        (
+                            is_subject_equal(subject="정치와 법"),
+                            selector("plan")
+                            | multi_query_websearch
+                            | contents_quality_filter(
+                                min_length=50,
+                                max_length=8000,
+                                min_korean_ratio=0.1,
+                            ),
+                        ),
+                        # 그 외(한국사 등)는 ensemble
+                        selector("plan")
+                        | multi_query_ensemble
+                        | contents_quality_filter(
+                            min_length=50,
+                            max_length=8000,
+                            min_korean_ratio=0.1,
+                        ),
+                    )
+                )
+                | reranker  # Reranker: list[list[Document]] -> list[list[Document]] (with rerank_score)
+                | merger  # Merger: list[list[Document]] -> RetrievalResponse (with context string)
+                | (lambda response: response.context),
             ),
             # paragraph가 길거나 RAG 미사용 시 빈 context
             constant(""),
@@ -96,7 +146,7 @@ def main(config: InferenceConfig):
     # -------------------------
     # 4) QA chain 생성
     # -------------------------
-    qa_chain = build_qa_chain(config=config, prompt_manager=prompt_manager)
+    qa_chain = build_non_think_cot_chain(config=inference_config, prompt_manager=prompt_manager)
 
     # -------------------------
     # 5) Whole chain 생성
@@ -120,14 +170,14 @@ def main(config: InferenceConfig):
     preds, score = map(list, zip(*infer_results, strict=True))
     # 결과 저장
     result_pred_df = pd.DataFrame(preds)
-    result_pred_df.to_csv(config.output_path, index=False)
+    result_pred_df.to_csv(inference_config.output_path, index=False)
 
     # score 저장
-    output_socore_path = config.output_path.replace(".csv", ".score.csv")
+    output_socore_path = inference_config.output_path.replace(".csv", ".score.csv")
     result_score_df = pd.DataFrame(score)
     result_score_df.to_csv(output_socore_path, index=False)
 
-    print(f"Inference completed. Results saved to {config.output_path}")
+    print(f"Inference completed. Results saved to {inference_config.output_path}")
     print(result_pred_df)
 
 
@@ -138,5 +188,9 @@ if __name__ == "__main__":
         sys.exit(1)
     load_dotenv()
     config_path = sys.argv[1]
-    config = InferenceConfig.from_yaml(config_path)
-    main(config)
+    inference_config = InferenceConfig.from_yaml(config_path)
+    retrieval_config = RetrievalConfig.from_yaml(config_path)
+    main(
+        inference_config,
+        retrieval_config,
+    )

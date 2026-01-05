@@ -13,6 +13,17 @@ from core.protocols import EmbedderProtocol, WebSearchClientProtocol
 from infrastructure.embedders import SolarEmbedder, SolarEmbedderConfig
 from infrastructure.websearch import TavilyClientWrapper, TavilySearchParams
 
+# 웹 검색에서 허용할 도메인 화이트리스트 (치팅 방지)
+WEBSEARCH_WHITELIST_DOMAINS: Sequence[str] = (
+    "encykorea.aks.ac.kr",
+    "history.go.kr",  # www.history.go.kr, db.history.go.kr, contents.history.go.kr 모두 매칭
+    "scourt.go.kr",  # www.scourt.go.kr 및 서브도메인 매칭
+    "law.go.kr",  # www.law.go.kr 및 서브도메인 매칭
+    "wikidata.org",  # www.wikidata.org 및 서브도메인 매칭
+    "history.state.gov",
+    "openstax.org",
+)
+
 # 웹 검색에서 제외할 도메인 기본값
 DEFAULT_WEBSEARCH_EXCLUDE_DOMAINS: Sequence[str] = (
     "reddit.com",
@@ -69,6 +80,7 @@ def create_websearch_client() -> WebSearchClientProtocol:
         WebSearchClientProtocol 구현체
     """
     default_params: TavilySearchParams = {
+        "include_domains": list(WEBSEARCH_WHITELIST_DOMAINS),
         "exclude_domains": list(DEFAULT_WEBSEARCH_EXCLUDE_DOMAINS),
         "topic": "general",
     }

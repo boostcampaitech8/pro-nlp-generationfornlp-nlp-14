@@ -16,6 +16,7 @@ import logging
 from typing import Any
 
 import requests
+from langchain_core.documents import Document
 from langchain_core.runnables import RunnableConfig, RunnableLambda
 
 from .transformers import (
@@ -38,30 +39,26 @@ def build_reranker(base_url: str) -> RunnableLambda:
 
     def _execute_rerank(
         data: dict[str, Any], config: RunnableConfig = None
-    ) -> list[Any]:  # 반환 타입을 QueryResult 리스트 유지를 위해 Any로 변경
+    ) -> list[list[Document]]:
         if not validate_rerank_input(data):
             return data.get("multi_docs", [])
 
-        original_data = data.get("data", {})
-        multi_results = data.get("multi_docs", [])  # QueryResult 객체들의 리스트
+        multi_docs: list[list[Document]] = data.get("multi_docs", [])
+        rich_query = format_rich_query(data)
 
-        rich_query = format_rich_query(original_data)
-
-        # 각 QueryResult 객체를 순회
-        for res_obj in multi_results:
-            # QueryResult 내부에 실제 Document 객체 리스트를 가져옴
-            docs = getattr(res_obj, "documents", [])
+        for i, docs in enumerate(multi_docs):
             if not docs:
                 continue
 
             try:
-                # BGE-Reranker API 호출
+                doc_contents = [d.page_content for d in docs]
+
                 response = requests.post(
                     f"{base_url.rstrip('/')}/v1/rerank",
                     json={
                         "model": "bge-reranker-v2-m3",
                         "query": rich_query,
-                        "documents": [d.page_content for d in docs],  # 여기서 .page_content 접근
+                        "documents": doc_contents,
                         "top_n": len(docs),
                     },
                     timeout=30,
@@ -78,15 +75,14 @@ def build_reranker(base_url: str) -> RunnableLambda:
                         doc = docs[idx]
                         doc.metadata["rerank_score"] = item.get("relevance_score", 0.0)
                         scored_docs.append(doc)
-                # QueryResult 객체의 documents를 리랭킹된 결과로 교체
-                res_obj.documents = scored_docs
+
+                multi_docs[i] = scored_docs
 
             except Exception as e:
-                logger.error(f"Reranking for query '{res_obj.query}' failed: {e}")
+                logger.error(f"Reranking for query group {i} failed: {e}")
 
-        # 리랭킹 결과 요약 로그 출력
-        log_rerank_results(multi_results)
+        log_rerank_results(multi_docs)
 
-        return multi_results
+        return multi_docs
 
-    return RunnableLambda(_execute_rerank)
+    return RunnableLambda(_execute_rerank, name="reranker")

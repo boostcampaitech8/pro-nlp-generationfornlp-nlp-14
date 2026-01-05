@@ -10,12 +10,15 @@ Reranker 데이터 변환 및 유틸리티 모듈.
 """
 
 import logging
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from langchain_core.documents import Document
 
 logger = logging.getLogger(__name__)
 
 
-def truncate_text(text: str, max_chars: int = 200) -> str:
+def truncate_text(text: str, max_chars: int) -> str:
     """
     리랭커 모델의 입력 제한을 고려하여 텍스트 길이를 제한합니다.
     질문(Question)이나 선택지(Choice)가 너무 길 경우 모델 에러를 방지합니다.
@@ -27,10 +30,10 @@ def truncate_text(text: str, max_chars: int = 200) -> str:
 
 def validate_rerank_input(input_data: dict[str, Any]) -> bool:
     """
-    리랭커가 필요한 필수 데이터(data, multi_docs)가 포함되어 있는지 검증합니다.
+    리랭커가 필요한 필수 데이터(multi_docs)가 포함되어 있는지 검증합니다.
     """
-    if "data" not in input_data or "multi_docs" not in input_data:
-        logger.error("Reranker input missing 'data' or 'multi_docs'")
+    if "multi_docs" not in input_data:
+        logger.error("Reranker input missing 'multi_docs'")
         return False
 
     if not isinstance(input_data["multi_docs"], list):
@@ -40,25 +43,40 @@ def validate_rerank_input(input_data: dict[str, Any]) -> bool:
     return True
 
 
-def format_rich_query(original_data: dict[str, Any]) -> str:
+def format_rich_query(data: dict[str, Any]) -> str:
     """
     원본 데이터로부터 리랭킹에 최적화된 'Rich Query'를 생성합니다.
+
+    Args:
+        data: question, choices(리스트), paragraph 등을 포함한 MCQ 데이터
     """
-    question = original_data.get("question", "")
-    choice = original_data.get("choice", "")
+    question = data.get("question", "")
+    choices = data.get("choices", [])
+    paragraph = data.get("paragraph", "")
+
+    # choices가 리스트면 번호 붙여서 문자열로 변환
+    if isinstance(choices, list):
+        choices_str = " ".join(f"({i + 1}) {c}" for i, c in enumerate(choices))
+    else:
+        choices_str = str(choices)
 
     # 질문과 선택지를 명확히 구분하여 모델이 맥락을 이해하기 쉽게 구성
-    query = f"질문: {question}\n선택지: {choice}"
+    parts = [f"질문: {question}"]
+    if choices_str:
+        parts.append(f"선택지: {choices_str}")
+    if paragraph:
+        parts.append(f"지문: {truncate_text(paragraph, max_chars=600)}")
+
+    query = "\n".join(parts)
 
     # 리랭커 모델(BGE 등)의 일반적인 토큰 제한을 고려하여 글자 수 제한
-    return truncate_text(query, max_chars=1500)
+    return truncate_text(query, max_chars=2500)
 
 
-def log_rerank_results(reranked_results: list[Any]):
-    for i, res_obj in enumerate(reranked_results):
-        # QueryResult 객체인지 확인 (documents 속성이 있는지)
-        docs = getattr(res_obj, "documents", [])
-        if docs and hasattr(docs[0], "metadata"):
+def log_rerank_results(multi_docs: "list[list[Document]]") -> None:
+    """리랭킹 결과 요약 로그 출력."""
+    for i, docs in enumerate(multi_docs):
+        if docs:
             top_score = docs[0].metadata.get("rerank_score", 0.0)
             logger.info(f"Query {i} Reranked - Top Score: {top_score:.4f}, Count: {len(docs)}")
         else:

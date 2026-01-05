@@ -4,6 +4,7 @@ LangChain 기반 retriever 빌더와 관련 유틸리티를 제공합니다.
 """
 
 from chains.retrieval.chain import build_multi_query_retriever
+from chains.retrieval.contents_quality_filter import contents_quality_filter, is_quality_content
 from chains.retrieval.context_builder import build_context
 from chains.retrieval.factory import (
     create_local_retriever,
@@ -18,4 +19,7 @@ __all__ = [
     # Factory
     "create_local_retriever",
     "create_websearch_retriever",
+    # Filters
+    "is_quality_content",
+    "contents_quality_filter",
 ]

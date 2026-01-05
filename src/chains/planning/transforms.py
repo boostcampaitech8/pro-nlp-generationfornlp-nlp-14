@@ -56,6 +56,9 @@ def validate_plan(plan: RetrievalPlan | dict) -> RetrievalPlan:
     if isinstance(plan, RetrievalPlan):
         return plan
     if isinstance(plan, dict):
+        # subject 필드 검증: 유효하지 않은 값이면 기본값으로 대체
+        if "subject" in plan and plan["subject"] not in ["한국사", "정치와 법", "general"]:
+            plan["subject"] = "general"
         return RetrievalPlan(**plan)
 
     # 예상치 못한 타입 → 빈 plan 반환 (검색 스킵)
@@ -64,4 +67,4 @@ def validate_plan(plan: RetrievalPlan | dict) -> RetrievalPlan:
         f"Unexpected plan type: {type(plan)}. Returning empty plan. "
         f"This question will proceed without retrieval."
     )
-    return RetrievalPlan(requests=[])
+    return RetrievalPlan(requests=[], subject="general")

@@ -40,13 +40,13 @@ train:
 inference:
   # 모델 설정
   model:
-    checkpoint_path: "unsloth/Qwen2.5-32B-Instruct-bnb-4bit"   #실제 경로 or Hugging Face 모델명
+    checkpoint_path: "unsloth/Qwen2.5-32B-Instruct-bnb-4bit" #실제 경로 or Hugging Face 모델명
     enable_thinking: false
 
   # 데이터 설정
   data:
     test_path: "data/test.csv"
-    prompt_style: "v1"
+    prompt_style: "v9"
 
   # Only use FastLanguage Model
   FLM:
@@ -69,8 +69,8 @@ inference:
     query_plan_log_path: "log/query_decompositions.jsonl" # Query plan 로그 경로
 
     # Reranker 설정
-    num_retrieved_docs: 5  # 검색된 문서 중 상위 n개를 reranker에 전달
-    top_k_per_query: 10   # reranker가 선택하는 상위 k개 문서
+    num_retrieved_docs: 5 # 검색된 문서 중 상위 n개를 reranker에 전달
+    top_k_per_query: 10 # reranker가 선택하는 상위 k개 문서
 
   # Planner LLM 설정
   planner_llm:
@@ -89,13 +89,18 @@ wandb:
 # -------------------------------------------- #
 
 retrieval:
-  # RRF 설정
-  use_rrf: false
+  # Ensemble 설정 (Local + Web)
+  ensemble:
+    local_retriever_weight: 0.5 # 로컬 retriever 가중치
+    web_retriever_weight: 0.5 # 웹 서치 가중치
+
+  # RRF 설정 (무료 라이센스에서 사용 가능, linear retriever는 Enterprise 필요)
+  use_rrf: true
   rrf_rank_constant: 60
 
   # 인덱스명 (선택적)
-  parents_index: "parents"
-  chunks_index: "chunks"
+  parents_index: "kb_parents_v1"
+  chunks_index: "kb_chunks_v1"
 
   # Parent 검색 (Stage 1: BM25 비중 높게)
   parent:

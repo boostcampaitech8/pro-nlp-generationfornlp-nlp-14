@@ -47,7 +47,7 @@ def create_local_retriever(
     Returns:
         LangChain BaseRetriever 호환 retriever
     """
-    cfg = config or RetrievalConfig()
+    cfg = config or RetrievalConfig(RetrievalConfig())
 
     # 1) ES 컴포넌트 생성 (env에서 연결 정보 읽음)
     es_components = create_es_components()
@@ -74,6 +74,7 @@ def create_local_retriever(
         chunk_size=cfg.chunk_size,
         chunk_sparse_weight=cfg.chunk_sparse_weight,
         chunk_dense_weight=cfg.chunk_dense_weight,
+        use_rrf=cfg.use_rrf,
     )
     service = LocalRetrieverService(
         pdr_retriever=pdr,
