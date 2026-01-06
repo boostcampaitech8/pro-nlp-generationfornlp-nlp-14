@@ -4,7 +4,7 @@ from .base import BasePrompt
 class V10Prompt(BasePrompt):
     """V9: RAG용 {context}추가"""
 
-    PROMPT_NO_QUESTION_PLUS = """아래 지문의 내용을 근거로 할 때, 질문에 대한 가장 적절한 답변을 선택지 {choice_range} 에서 하나만 고르세요.
+    PROMPT_NO_QUESTION_PLUS = """아래 지문의 내용을 근거로 할 때, 질문에 대한 가장 적절한 답변을 풀이과정과 함께 {choice_range} 에서 하나만 고르세요.
 
 <제시문>
 {paragraph}
@@ -24,9 +24,9 @@ class V10Prompt(BasePrompt):
 <선택지>
 {choices}
 
-정답:"""
+풀이과정:"""
 
-    PROMPT_QUESTION_PLUS = """아래 지문과 <보기>의 내용을 근거로 할 때, 질문에 대한 가장 적절한 답변을 선택지 {choice_range} 에서 하나만 고르세요.
+    PROMPT_QUESTION_PLUS = """아래 지문과 <보기>의 내용을 근거로 할 때, 질문에 대한 가장 적절한 답변을 풀이과정과 함께 {choice_range} 에서 하나만 고르세요.
 
 <제시문>
 {paragraph}
@@ -49,7 +49,7 @@ class V10Prompt(BasePrompt):
 {choices}
 
 
-정답:"""
+풀이과정:"""
 
     @property
     def system_prompt(self) -> str:
