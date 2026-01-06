@@ -29,6 +29,7 @@ class TavilySearchParams(TypedDict, total=False):
     include_domains: Sequence[str]
     exclude_domains: Sequence[str]
     include_raw_content: bool | Literal["markdown", "text"]
+    search_depth: str
 
 
 def _is_whitelisted_domain(url: str, whitelist: Sequence[str]) -> bool:

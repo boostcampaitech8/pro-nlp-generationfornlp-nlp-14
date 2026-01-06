@@ -88,7 +88,7 @@ def create_websearch_client() -> WebSearchClientProtocol:
         "include_domains": list(WEBSEARCH_WHITELIST_DOMAINS),
         "exclude_domains": list(DEFAULT_WEBSEARCH_EXCLUDE_DOMAINS),
         "topic": "general",
-        "include_answer": "advanced",
+        "search_depth": "advanced",
     }
 
     return TavilyClientWrapper(default_params=default_params)
