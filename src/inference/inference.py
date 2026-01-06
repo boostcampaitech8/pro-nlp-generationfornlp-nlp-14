@@ -10,7 +10,7 @@ from langchain_core.runnables import (
     RunnablePassthrough,
 )
 from langchain_openai import ChatOpenAI
-from tqdm.asyncio import tqdm as async_tqdm
+from tqdm import tqdm
 
 from chains.planning import build_planner
 from chains.qa.inference.think_cot import build_think_cot_chain
@@ -155,36 +155,23 @@ def main(inference_config: InferenceConfig, retrieval_config: RetrievalConfig):
     whole_chain = augmentation_chain | qa_chain
 
     # -------------------------
-    # 6) 비동기 배치 처리
+    # 6) 동기 배치 처리 with tqdm
     # -------------------------
-    async def process_all_rows():
-        """모든 row를 비동기로 처리"""
-        # Semaphore로 동시 실행 수 제한 (API rate limit 고려)
-        semaphore = asyncio.Semaphore(2)
+    infer_results = []
 
-        async def process_one_row(row):
-            """단일 row 처리 with 동시성 제어"""
-            async with semaphore:
-                question_data: PreprocessedQuestion = {
-                    **row,
-                    "len_choices": len(row["choices"]),
-                }
-                return await whole_chain.ainvoke(
-                    {"data": question_data},
-                    config={"run_name": str(question_data["id"])},
-                )
-
-        # 모든 row에 대한 task 생성
-        tasks = [process_one_row(row) for _, row in test_df.iterrows()]
-
-        # 병렬 처리 with progress bar
-        infer_results = await async_tqdm.gather(*tasks, desc="Inference")
-        return infer_results
-
-    # 이벤트 루프 실행
-    infer_results = asyncio.run(process_all_rows())
+    for _, row in tqdm(test_df.iterrows(), total=len(test_df), desc="Inference"):
+        question_data: PreprocessedQuestion = {
+            **row,
+            "len_choices": len(row["choices"]),
+        }
+        result = whole_chain.invoke(
+            {"data": question_data},
+            config={"run_name": str(question_data["id"])},
+        )
+        infer_results.append(result)
 
     preds, score = map(list, zip(*infer_results, strict=True))
+
     # 결과 저장
     result_pred_df = pd.DataFrame(preds)
     result_pred_df.to_csv(inference_config.output_path, index=False)

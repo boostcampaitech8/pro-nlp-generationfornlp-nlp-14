@@ -69,7 +69,7 @@ def _build_think_cot_forward() -> Runnable[McqRequest, dict]:
         temperature=0.7,
         top_p=0.95,
         max_retries=2,
-        timeout=900,  # 10분 timeout
+        timeout=3600,  # 10분 timeout
         extra_body=draft_extra_body,
     )
 
