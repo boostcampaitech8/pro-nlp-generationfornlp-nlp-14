@@ -22,6 +22,11 @@ WEBSEARCH_WHITELIST_DOMAINS: Sequence[str] = (
     "wikidata.org",  # www.wikidata.org 및 서브도메인 매칭
     "history.state.gov",
     "openstax.org",
+    "wikipedia.org",
+    "ccourt.go.kr",
+    "easylaw.go.kr",
+    "archive.much.go.kr",
+    "terms.naver.com",
 )
 
 # 웹 검색에서 제외할 도메인 기본값
@@ -83,6 +88,7 @@ def create_websearch_client() -> WebSearchClientProtocol:
         "include_domains": list(WEBSEARCH_WHITELIST_DOMAINS),
         "exclude_domains": list(DEFAULT_WEBSEARCH_EXCLUDE_DOMAINS),
         "topic": "general",
+        "include_answer": "advanced",
     }
 
     return TavilyClientWrapper(default_params=default_params)

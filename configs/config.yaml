@@ -46,7 +46,7 @@ inference:
   # 데이터 설정
   data:
     test_path: "data/test.csv"
-    prompt_style: "v9"
+    prompt_style: "v10"
 
   # Only use FastLanguage Model
   FLM:

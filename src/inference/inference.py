@@ -13,7 +13,7 @@ from langchain_openai import ChatOpenAI
 from tqdm.asyncio import tqdm as async_tqdm
 
 from chains.planning import build_planner
-from chains.qa.inference.not_think_cot import build_non_think_cot_chain
+from chains.qa.inference.think_cot import build_think_cot_chain
 from chains.reranker import build_reranker, merge_strategies
 from chains.retrieval import (
     build_multi_query_retriever,
@@ -90,7 +90,7 @@ def main(inference_config: InferenceConfig, retrieval_config: RetrievalConfig):
     # 3) Augmentation chain (조건부: paragraph 짧고 RAG 사용 시에만 planning → retrieval → context)
     # -------------------------
     plan_logger = tap(
-        inference_config.query_plan_log_path, lambda x: {"id": x["data"]["id"], "plan": x["plan"]}
+        inference_config.query_plan_log_path, lambda x: {"id": x["id"], "plan": x["plan"]}
     )
 
     augmentation_chain = RunnablePassthrough.assign(
@@ -106,7 +106,7 @@ def main(inference_config: InferenceConfig, retrieval_config: RetrievalConfig):
                 ),  # paragraph가 짧고 RAG 사용 시에만 planner + retrieval 실행
                 selector("data")
                 | RunnablePassthrough.assign(plan=planner)
-                | plan_logger  # plan 로그 저장
+                # | plan_logger  # plan 로그 저장
                 | RunnablePassthrough.assign(
                     multi_docs=RunnableBranch(
                         # subject가 'general'이면 retrieval 스킵
@@ -147,7 +147,7 @@ def main(inference_config: InferenceConfig, retrieval_config: RetrievalConfig):
     # -------------------------
     # 4) QA chain 생성
     # -------------------------
-    qa_chain = build_non_think_cot_chain(config=inference_config, prompt_manager=prompt_manager)
+    qa_chain = build_think_cot_chain(config=inference_config, prompt_manager=prompt_manager)
 
     # -------------------------
     # 5) Whole chain 생성
