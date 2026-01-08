@@ -7,6 +7,7 @@ from .v5 import V5Prompt
 from .v6 import V6Prompt
 from .v7 import V7Prompt
 from .v9 import V9Prompt
+from .v10 import V10Prompt
 
 PROMPT_REGISTRY = {
     "v1": V1Prompt(),
@@ -17,6 +18,7 @@ PROMPT_REGISTRY = {
     "v6": V6Prompt(),
     "v7": V7Prompt(),
     "v9": V9Prompt(),  # v9는 v7과 동일
+    "v10": V10Prompt(),
 }
 
 

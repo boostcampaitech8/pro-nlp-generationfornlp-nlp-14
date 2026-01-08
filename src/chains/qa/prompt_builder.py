@@ -19,7 +19,7 @@ def build_mcq_request(
         dict: QA chain 입력 형태 (id, messages, len_choices)
     """
     # PreprocessedQuestion에 context 추가
-    row = {**data, "context": f"### 힌트\n{context}" if context else ""}
+    row = {**data, "context": f"\n{context}" if context else ""}
 
     system_msg = prompt.make_system_prompt(row)
     user_msg = prompt.make_user_prompt(row)

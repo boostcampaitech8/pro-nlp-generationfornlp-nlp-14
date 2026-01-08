@@ -1,8 +1,12 @@
 from __future__ import annotations
 
+import asyncio
 from typing import Any
 
-from langchain_core.callbacks import CallbackManagerForRetrieverRun
+from langchain_core.callbacks import (
+    AsyncCallbackManagerForRetrieverRun,
+    CallbackManagerForRetrieverRun,
+)
 from langchain_core.documents import Document
 from langchain_core.retrievers import BaseRetriever
 
@@ -55,12 +59,53 @@ class LangChainRetrievalAdapter(BaseRetriever):
         run_manager: CallbackManagerForRetrieverRun | None = None,
         **kwargs: Any,
     ) -> list[Document]:
+        """동기 검색 메서드 - LangChain BaseRetriever 인터페이스 구현"""
         k = kwargs.pop("top_k", None) or self._top_k
         req = RetrievalRequest(query=query, top_k=int(k))
         call_kwargs = {**self._default_kwargs, **kwargs}
         responses = self._service.search(req, **call_kwargs) or []
 
         # 서버가 top_k를 무시할 수도 있으니 방어적으로 컷
+        responses = responses[: int(k)]
+
+        docs: list[Document] = []
+        for i, r in enumerate(responses):
+            metadata = {
+                "source": self._source_name,
+                "question": r.question or query,
+                "rank": i,
+                "top_k": int(k),
+            }
+            if isinstance(r.metadata, dict):
+                metadata.update(r.metadata)
+            docs.append(
+                Document(
+                    page_content=r.context or "",
+                    metadata=metadata,
+                )
+            )
+        return docs
+
+    async def _aget_relevant_documents(
+        self,
+        query: str,
+        *,
+        run_manager: AsyncCallbackManagerForRetrieverRun | None = None,
+        **kwargs: Any,
+    ) -> list[Document]:
+        """비동기 검색 메서드 - run_in_executor 패턴으로 동기 서비스 호출"""
+        loop = asyncio.get_event_loop()
+
+        k = kwargs.pop("top_k", None) or self._top_k
+        req = RetrievalRequest(query=query, top_k=int(k))
+        call_kwargs = {**self._default_kwargs, **kwargs}
+
+        # Blocking I/O를 executor에서 실행
+        responses = (
+            await loop.run_in_executor(None, lambda: self._service.search(req, **call_kwargs)) or []
+        )
+
+        # 나머지 변환 로직은 CPU-bound이므로 동기로 처리
         responses = responses[: int(k)]
 
         docs: list[Document] = []
