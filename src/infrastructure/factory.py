@@ -8,9 +8,21 @@ from __future__ import annotations
 
 import os
 from collections.abc import Sequence
+from dataclasses import dataclass
 
-from core.protocols import EmbedderProtocol, WebSearchClientProtocol
+from elasticsearch import Elasticsearch
+
+from core.protocols import (
+    DocumentRepositoryProtocol,
+    DocumentSearcherProtocol,
+    EmbedderProtocol,
+    WebSearchClientProtocol,
+)
 from infrastructure.embedders import SolarEmbedder, SolarEmbedderConfig
+from infrastructure.vectorstore.client import create_es_client
+from infrastructure.vectorstore.config import ESConfig
+from infrastructure.vectorstore.repository import ParentRepository
+from infrastructure.vectorstore.search import HybridSearcher
 from infrastructure.websearch import TavilyClientWrapper, TavilySearchParams
 
 # 웹 검색에서 허용할 도메인 화이트리스트 (치팅 방지)
@@ -92,3 +104,36 @@ def create_websearch_client() -> WebSearchClientProtocol:
     }
 
     return TavilyClientWrapper(default_params=default_params)
+
+
+@dataclass
+class ESComponents:
+    """Elasticsearch 관련 컴포넌트 묶음."""
+
+    es: Elasticsearch
+    searcher: DocumentSearcherProtocol
+    parent_reader: DocumentRepositoryProtocol
+
+
+def create_es_components(
+    config: ESConfig | None = None,
+) -> ESComponents:
+    """
+    Elasticsearch 관련 컴포넌트를 생성합니다.
+
+    Args:
+        config: ES 설정 (None이면 기본값 사용)
+
+    Returns:
+        ESComponents (es, searcher, parent_reader)
+    """
+    cfg = config or ESConfig()
+    es = create_es_client(cfg)
+    searcher = HybridSearcher(es, cfg)
+    parent_reader = ParentRepository(es, cfg)
+
+    return ESComponents(
+        es=es,
+        searcher=searcher,
+        parent_reader=parent_reader,
+    )
