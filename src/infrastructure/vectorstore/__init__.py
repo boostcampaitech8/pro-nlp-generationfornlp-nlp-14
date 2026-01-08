@@ -22,13 +22,13 @@ Usage:
     >>> parent_repo.upsert(parent_doc)
 """
 
-from vectorstore.backup import LocalBackupManager, VectorStoreBackup, WriteThroughStore
-from vectorstore.client import check_connection, create_es_client
-from vectorstore.config import ESConfig
-from vectorstore.documents import ChunkDoc, ParentDoc
-from vectorstore.factory import ESComponents, create_es_components
-from vectorstore.repository import BaseRepository, ChunkRepository, ParentRepository
-from vectorstore.search import HybridSearcher
+from infrastructure.vectorstore.backup import LocalBackupManager, VectorStoreBackup, WriteThroughStore
+from infrastructure.vectorstore.client import check_connection, create_es_client
+from infrastructure.vectorstore.config import ESConfig
+from infrastructure.vectorstore.documents import ChunkDoc, ParentDoc
+from infrastructure.vectorstore.factory import ESComponents, create_es_components
+from infrastructure.vectorstore.repository import BaseRepository, ChunkRepository, ParentRepository
+from infrastructure.vectorstore.search import HybridSearcher
 
 __all__ = [
     # Config

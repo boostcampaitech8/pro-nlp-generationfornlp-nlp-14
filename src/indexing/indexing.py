@@ -5,7 +5,7 @@ import dotenv
 from openai import OpenAI
 
 # 프로젝트 구조에 맞춘 임포트 (경로를 명확히 지정)
-from vectorstore import (
+from infrastructure.vectorstore import (
     ChunkDoc,
     ESConfig,
     ParentDoc,

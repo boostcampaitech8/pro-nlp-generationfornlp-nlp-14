@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from vectorstore.documents import ChunkDoc
-from vectorstore.repository.base import BaseRepository
+from infrastructure.vectorstore.documents import ChunkDoc
+from infrastructure.vectorstore.repository.base import BaseRepository
 
 
 class ChunkRepository(BaseRepository[ChunkDoc]):

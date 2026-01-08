@@ -29,7 +29,7 @@ from chains.retrieval.services.local import (
 from chains.retrieval.services.websearch import WebSearchService
 from infrastructure.factory import create_embedder, create_websearch_client
 from utils.config_loader import RetrievalConfig
-from vectorstore.factory import create_es_components
+from infrastructure.vectorstore.factory import create_es_components
 
 
 def create_local_retriever(

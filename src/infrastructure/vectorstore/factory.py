@@ -11,10 +11,10 @@ from dataclasses import dataclass
 from elasticsearch import Elasticsearch
 
 from core.protocols import DocumentRepositoryProtocol, DocumentSearcherProtocol
-from vectorstore.client import create_es_client
-from vectorstore.config import ESConfig
-from vectorstore.repository import ParentRepository
-from vectorstore.search import HybridSearcher
+from infrastructure.vectorstore.client import create_es_client
+from infrastructure.vectorstore.config import ESConfig
+from infrastructure.vectorstore.repository import ParentRepository
+from infrastructure.vectorstore.search import HybridSearcher
 
 
 @dataclass
