@@ -9,7 +9,7 @@ from typing import Any, Generic, TypeVar
 from elasticsearch import Elasticsearch
 from elasticsearch.helpers import bulk
 
-from vectorstore.config import ESConfig
+from infrastructure.vectorstore.config import ESConfig
 
 T = TypeVar("T")
 

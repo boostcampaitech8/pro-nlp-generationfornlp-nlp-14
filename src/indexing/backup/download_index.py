@@ -12,9 +12,9 @@ import argparse
 import logging
 from pathlib import Path
 
-from vectorstore.backup import VectorStoreBackup
-from vectorstore.client import create_es_client
-from vectorstore.config import ESConfig
+from infrastructure.vectorstore.backup import VectorStoreBackup
+from infrastructure.vectorstore.client import create_es_client
+from infrastructure.vectorstore.config import ESConfig
 
 logging.basicConfig(
     level=logging.INFO,

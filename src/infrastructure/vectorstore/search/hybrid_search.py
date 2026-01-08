@@ -10,7 +10,7 @@ from typing import Any
 from elasticsearch import Elasticsearch
 
 from core.types import DocumentSearchHit, DocumentSearchParams
-from vectorstore.config import ESConfig
+from infrastructure.vectorstore.config import ESConfig
 
 
 class HybridSearcher:

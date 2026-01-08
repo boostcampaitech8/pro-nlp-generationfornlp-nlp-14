@@ -5,7 +5,12 @@
 """
 
 from infrastructure.embedders import SolarEmbedder, SolarEmbedderConfig
-from infrastructure.factory import create_embedder, create_websearch_client
+from infrastructure.factory import (
+    ESComponents,
+    create_embedder,
+    create_es_components,
+    create_websearch_client,
+)
 from infrastructure.websearch import TavilyClientWrapper
 
 __all__ = [
@@ -15,6 +20,8 @@ __all__ = [
     # WebSearch
     "TavilyClientWrapper",
     # Factory
+    "ESComponents",
     "create_embedder",
+    "create_es_components",
     "create_websearch_client",
 ]

@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from elasticsearch import Elasticsearch
 
-from vectorstore.config import ESConfig
+from infrastructure.vectorstore.config import ESConfig
 
 
 def create_es_client(cfg: ESConfig | None = None) -> Elasticsearch:
