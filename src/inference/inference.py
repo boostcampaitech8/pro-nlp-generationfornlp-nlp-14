@@ -1,5 +1,8 @@
 import sys
 
+import sys  # noqa: I001
+from unsloth import FastLanguageModel
+
 import pandas as pd
 from chains.nodes.mcq_head_nodes import (
     create_choice_scorer,
@@ -12,17 +15,23 @@ from tqdm import tqdm
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
 from data.data_processing import create_test_prompt_messages, load_and_parse_data
-from utils import InferenceConfig
+from utils import InferenceConfig, get_choice_token_ids, logits_to_prediction
 
 
-def main(config: InferenceConfig):
-    """추론 메인 함수
+def load_model(model_path: str):
+    """checkpoint 경로에 따라 모델/토크나이저를 로드한다."""
+    try:
+        model, tokenizer = FastLanguageModel.from_pretrained(
+            model_name=model_path,
+            load_in_4bit=True,
+        )
+        FastLanguageModel.for_inference(model)
+        return model, tokenizer
+    except Exception as e:
+        # Fast 경로 실패 시 기본 로더로 폴백
+        print(f"[WARN]: FastLanguageModel load failed, fallback to HF loader. reason={e}")
 
-    Args:
-        config: 추론 설정 객체
-    """
-    if config.checkpoint_path[:7] == "outputs":
-        # 모델 및 토크나이저 로드
+    if model_path[:7] == "outputs":
         model = AutoPeftModelForCausalLM.from_pretrained(
             config.checkpoint_path,
             trust_remote_code=True,
@@ -38,6 +47,17 @@ def main(config: InferenceConfig):
         config.checkpoint_path,
         trust_remote_code=True,
     )
+    model.eval()
+    return model, tokenizer
+
+
+def main(config: InferenceConfig):
+    """추론 메인 함수
+
+    Args:
+        config: 추론 설정 객체
+    """
+    model, tokenizer = load_model(config.checkpoint_path, config.max_seq_length)
 
     # 테스트 데이터 로드 및 전처리
     test_df = load_and_parse_data(config.test_data)
